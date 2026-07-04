@@ -1,11 +1,14 @@
 # Empleia · Panel Unificado
 
 **Todos tus datos esparcidos, en un solo dashboard.** Subes Excels, PDFs,
-imágenes, calendarios (.ics) o JSON, o conectas directamente tu cuenta de
-Google (Gmail, Calendar, Sheets), y la IA de Google Gemini lo lee todo, lo
+imágenes, calendarios (.ics) o JSON, y la IA de Google Gemini lo lee todo, lo
 normaliza y lo organiza automáticamente en un panel con cifras clave,
 gráficos, agenda unificada, resumen inteligente y un chatbot que responde
 preguntas y edita el panel por ti.
+
+> La conexión con Gmail, Google Calendar y Google Sheets está implementada en
+> el código pero **desconectada de la app de momento** (queda para más
+> adelante); ver la sección de configuración.
 
 ## Qué hace
 
@@ -18,12 +21,11 @@ preguntas y edita el panel por ti.
 2. **Subida de archivos** (clic o arrastrar): Excel/CSV (se parsean con
    `xlsx`), PDF e imágenes (Gemini los lee por visión/OCR), calendarios
    `.ics`, JSON y texto.
-3. **Conexión oficial con Google:** con un clic se abre la ventana OAuth de
-   Google (permisos de solo lectura) y puedes importar como fuentes del
-   panel tus **correos de Gmail** (últimos 30 días), los **eventos de Google
-   Calendar** y cualquiera de tus **hojas de Google Sheets**. El botón
-   "Sincronizar Google" las vuelve a leer para que el dashboard se mantenga
-   al día.
+3. **Conexión oficial con Google (pendiente):** importar correos de Gmail,
+   eventos de Google Calendar y hojas de Google Sheets como fuentes del panel
+   está implementado en el código (`src/lib/google.js` y
+   `ConexionesGoogle.jsx`) pero todavía no está enganchado a la interfaz; se
+   activará más adelante.
 4. **La IA entiende tu dashboard:** además de normalizar cada fuente
    (`{ titulo, categoria, resumen, columnas, registros, eventos, metricas }`),
    Gemini detecta **qué tipo de dashboard estás montando** — un panel de
@@ -100,8 +102,6 @@ barra lateral (se guarda en su navegador), o puedes fijarla para todos con
 - **React + Vite**
 - **Supabase** (`@supabase/supabase-js`): autenticación email+contraseña y
   tabla `paneles` (JSONB) con RLS
-- **Google Identity Services** (OAuth en el navegador) + APIs REST de Gmail,
-  Calendar, Sheets y Drive
 - **xlsx** para parsear Excel/CSV en el navegador
 - **API de Google Gemini** (`gemini-2.5-flash-lite` por defecto, configurable
   con `VITE_GEMINI_MODEL`): análisis de fuentes, detección del tipo de panel,

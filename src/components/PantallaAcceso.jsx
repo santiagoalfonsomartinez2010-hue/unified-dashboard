@@ -157,8 +157,8 @@ export default function PantallaAcceso({ onModoLocal }) {
       </div>
 
       <p className="acceso-pie">
-        Sube Excels, PDFs, imágenes y calendarios, conecta Gmail, Google Calendar y Google
-        Sheets, y la IA lo organiza todo en un solo dashboard.
+        Sube Excels, PDFs, imágenes y calendarios, y la IA lo organiza todo en un solo
+        dashboard.
       </p>
     </div>
   )

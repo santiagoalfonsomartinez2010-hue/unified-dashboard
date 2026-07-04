@@ -4,12 +4,10 @@ import Hero from './components/Hero'
 import Panel from './components/Panel'
 import ModalApiKey from './components/ModalApiKey'
 import PantallaAcceso from './components/PantallaAcceso'
-import ConexionesGoogle from './components/ConexionesGoogle'
 import Chatbot from './components/Chatbot'
 import { inferirTipoArchivo } from './lib/parseArchivo'
 import {
   analizarFuente,
-  analizarFuenteTexto,
   generarResumenGlobal,
   detectarTipoPanel,
   CATEGORIAS,
@@ -25,13 +23,6 @@ import {
   guardarPanel,
   borrarPanel,
 } from './lib/supabase'
-import {
-  tokenGoogle,
-  conectarGoogle,
-  leerCorreosGmail,
-  leerEventosCalendar,
-  leerHojaCalculo,
-} from './lib/google'
 import {
   cargarFuentes,
   guardarFuentes,
@@ -51,11 +42,15 @@ import './App.css'
 
   Flujo: el usuario crea una cuenta e inicia sesión (los dashboards se guardan
   en Supabase y se pueden abrir desde cualquier dispositivo), sube archivos
-  (Excel, PDF, imágenes, calendarios…) o conecta Gmail / Google Calendar /
-  Google Sheets, y la IA de Gemini lo normaliza todo en un solo dashboard.
-  La IA detecta además QUÉ tipo de dashboard se está montando (una peluquería,
-  un gimnasio, el control de pagos…) y un chatbot integrado responde preguntas
-  sobre los datos y edita el panel (estilo visual, nombres, tablas…).
+  (Excel, PDF, imágenes, calendarios…) y la IA de Gemini lo normaliza todo en
+  un solo dashboard. La IA detecta además QUÉ tipo de dashboard se está
+  montando (una peluquería, un gimnasio, el control de pagos…) y un chatbot
+  integrado responde preguntas sobre los datos y edita el panel (estilo
+  visual, nombres, tablas…).
+
+  (La conexión con Gmail / Google Calendar / Google Sheets queda para más
+  adelante: su código sigue en src/lib/google.js y ConexionesGoogle.jsx, pero
+  no está enganchado a la app todavía.)
 */
 
 let contadorId = 0
@@ -93,11 +88,9 @@ export default function App() {
   // IA y modales
   const [apiKey, setApiKey] = useState(() => cargarApiKey())
   const [modalKeyAbierto, setModalKeyAbierto] = useState(false)
-  const [modalGoogleAbierto, setModalGoogleAbierto] = useState(false)
   const [generandoResumen, setGenerandoResumen] = useState(false)
   const [avisoResumen, setAvisoResumen] = useState(null)
   const [detectandoTipo, setDetectandoTipo] = useState(false)
-  const [sincronizando, setSincronizando] = useState(false)
 
   const inputArchivosRef = useRef(null)
   const panelRef = useRef(null)
@@ -300,97 +293,6 @@ export default function App() {
     }
   }
 
-  /* ---------- Fuentes de Google (Gmail, Calendar, Sheets) ---------- */
-
-  /*
-    Importa (o re-sincroniza) una fuente de Google. referencia:
-    { tipo: 'gmail' } | { tipo: 'calendar' } | { tipo: 'sheet', spreadsheetId, nombre }
-  */
-  async function importarGoogle(referencia) {
-    if (!apiKey) {
-      setModalKeyAbierto(true)
-      return
-    }
-    let token = tokenGoogle()
-    if (!token) {
-      try {
-        token = await conectarGoogle()
-      } catch (error) {
-        window.alert(error.message)
-        return
-      }
-    }
-
-    const id =
-      referencia.tipo === 'gmail'
-        ? 'google-gmail'
-        : referencia.tipo === 'calendar'
-          ? 'google-calendar'
-          : `google-sheet-${referencia.spreadsheetId}`
-    const nombre =
-      referencia.tipo === 'gmail'
-        ? 'Gmail'
-        : referencia.tipo === 'calendar'
-          ? 'Google Calendar'
-          : referencia.nombre || 'Google Sheets'
-    const tipoArchivo =
-      referencia.tipo === 'gmail' ? 'gmail' : referencia.tipo === 'calendar' ? 'gcalendar' : 'gsheets'
-
-    setFuentes((previas) => {
-      const meta = {
-        id,
-        nombreArchivo: nombre,
-        tipoArchivo,
-        origen: 'google',
-        googleRef: referencia,
-        estado: 'procesando',
-        creado: Date.now(),
-      }
-      return previas.some((f) => f.id === id)
-        ? previas.map((f) => (f.id === id ? { ...f, ...meta, resultado: f.resultado } : f))
-        : [...previas, meta]
-    })
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-
-    try {
-      let texto
-      let titulo = nombre
-      if (referencia.tipo === 'gmail') {
-        texto = await leerCorreosGmail(token)
-      } else if (referencia.tipo === 'calendar') {
-        texto = await leerEventosCalendar(token)
-      } else {
-        const hoja = await leerHojaCalculo(token, referencia.spreadsheetId)
-        texto = hoja.texto
-        titulo = hoja.titulo
-      }
-      const resultado = await analizarFuenteTexto(titulo, texto, apiKey)
-      setFuentes((previas) =>
-        previas.map((f) =>
-          f.id === id ? { ...f, estado: 'listo', resultado, sincronizado: Date.now() } : f
-        )
-      )
-    } catch (error) {
-      setFuentes((previas) =>
-        previas.map((f) => (f.id === id ? { ...f, estado: 'error', error: error.message } : f))
-      )
-    }
-  }
-
-  // Re-sincroniza todas las fuentes de Google para tener el panel al día
-  async function sincronizarGoogle() {
-    const deGoogle = fuentes.filter((f) => f.origen === 'google' && f.googleRef)
-    if (deGoogle.length === 0) return
-    setSincronizando(true)
-    try {
-      for (const f of deGoogle) {
-        await importarGoogle(f.googleRef)
-      }
-    } finally {
-      setSincronizando(false)
-    }
-  }
-
   /* ---------- Resumen global ---------- */
 
   async function generarResumen() {
@@ -576,8 +478,6 @@ export default function App() {
         panelId={panelId}
         estadoGuardado={estadoGuardado}
         usuarioEmail={sesion?.user?.email || null}
-        haySincronizables={fuentes.some((f) => f.origen === 'google')}
-        sincronizando={sincronizando}
         onAnadir={pedirArchivos}
         onEjemplo={cargarEjemplo}
         onVaciar={vaciarPanel}
@@ -585,8 +485,6 @@ export default function App() {
         onCambiarPanel={cambiarPanel}
         onNuevoPanel={nuevoPanel}
         onBorrarPanel={borrarPanelActual}
-        onConectarGoogle={() => setModalGoogleAbierto(true)}
-        onSincronizar={sincronizarGoogle}
         onCerrarSesion={salir}
       />
 
@@ -635,14 +533,6 @@ export default function App() {
             setModalKeyAbierto(false)
             cargarEjemplo()
           }}
-        />
-      )}
-
-      {modalGoogleAbierto && (
-        <ConexionesGoogle
-          fuentes={fuentes}
-          onImportar={importarGoogle}
-          onCerrar={() => setModalGoogleAbierto(false)}
         />
       )}
 

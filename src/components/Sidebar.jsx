@@ -5,8 +5,6 @@ import {
   IconoPapelera,
   IconoLlave,
   IconoTipoArchivo,
-  IconoGoogle,
-  IconoSincronizar,
   IconoSalir,
   IconoUsuario,
 } from './Iconos'
@@ -25,8 +23,6 @@ export default function Sidebar({
   panelId,
   estadoGuardado,
   usuarioEmail,
-  haySincronizables,
-  sincronizando,
   onAnadir,
   onEjemplo,
   onVaciar,
@@ -34,8 +30,6 @@ export default function Sidebar({
   onCambiarPanel,
   onNuevoPanel,
   onBorrarPanel,
-  onConectarGoogle,
-  onSincronizar,
   onCerrarSesion,
 }) {
   const textoGuardado = {
@@ -91,19 +85,6 @@ export default function Sidebar({
         <button className="sidebar-item" type="button" onClick={onAnadir}>
           <IconoMas /> Añadir datos
         </button>
-        <button className="sidebar-item" type="button" onClick={onConectarGoogle}>
-          <IconoGoogle /> Conectar Google
-        </button>
-        {haySincronizables && (
-          <button
-            className="sidebar-item"
-            type="button"
-            onClick={onSincronizar}
-            disabled={sincronizando}
-          >
-            <IconoSincronizar /> {sincronizando ? 'Sincronizando…' : 'Sincronizar Google'}
-          </button>
-        )}
         <button className="sidebar-item" type="button" onClick={onEjemplo}>
           <IconoChispa /> Datos de ejemplo
         </button>
@@ -118,7 +99,7 @@ export default function Sidebar({
       <div className="sidebar-fuentes">
         {fuentes.length === 0 && (
           <p className="sidebar-vacio">
-            Aún no hay fuentes. Sube un Excel, un PDF, una imagen o conecta tu cuenta de Google.
+            Aún no hay fuentes. Sube un Excel, un PDF, una imagen o un calendario.
           </p>
         )}
         {fuentes.map((f) => (
