@@ -63,19 +63,22 @@ integraciones son independientes: cada una se activa con sus variables.
    "Confirm email" para que las cuentas entren sin verificación (útil en
    demos).
 
-### 2. Google — Gmail, Calendar y Sheets
+### 2. Google — Gmail, Calendar y Sheets (pendiente, más adelante)
 
-1. En <https://console.cloud.google.com> crea un proyecto y activa las APIs:
-   **Gmail API, Google Calendar API, Google Sheets API y Google Drive API**.
-2. Configura la pantalla de consentimiento OAuth (tipo External; añade tu
+El botón "Conectar Google" ya está implementado (`src/lib/google.js` y
+`ConexionesGoogle.jsx`), pero de momento no está configurado: sin
+`VITE_GOOGLE_CLIENT_ID` el modal simplemente avisa de que falta configurarlo,
+sin romper el resto de la app. Cuando se retome este paso, hará falta:
+
+1. En <https://console.cloud.google.com> crear un proyecto y activar las
+   APIs: **Gmail API, Google Calendar API, Google Sheets API y Google Drive
+   API**.
+2. Configurar la pantalla de consentimiento OAuth (tipo External; añadir la
    cuenta como test user mientras la app no esté verificada).
-3. Crea unas credenciales **OAuth Client ID → Web application** y añade los
-   orígenes autorizados de JavaScript: `http://localhost:5173` y tu dominio
-   de producción (p. ej. el de Vercel).
-4. Copia el client id a:
-   ```
-   VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-   ```
+3. Crear unas credenciales **OAuth Client ID → Web application** con los
+   orígenes autorizados de JavaScript: `http://localhost:5173` y el dominio
+   de producción.
+4. Añadir el client id como `VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com`.
 
 La conexión pide solo permisos de **lectura** (gmail.readonly,
 calendar.readonly, spreadsheets.readonly, drive.metadata.readonly) y el token
@@ -120,10 +123,10 @@ npm run preview  # previsualizar el build
 Importa el repo en Vercel apuntando a la rama
 `claude/ai-dashboard-gmail-chatbot-6kttjp`. Añade en **Settings →
 Environment Variables** las variables del `.env` que uses
-(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GOOGLE_CLIENT_ID` y
-opcionalmente `VITE_GEMINI_API_KEY`) y pulsa **Redeploy** (Vite incrusta las
-variables en tiempo de build). Recuerda añadir el dominio de Vercel a los
-orígenes autorizados del OAuth Client ID de Google.
+(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y opcionalmente
+`VITE_GEMINI_API_KEY`) y pulsa **Redeploy** (Vite incrusta las variables en
+tiempo de build). `VITE_GOOGLE_CLIENT_ID` se añadirá cuando se configure la
+conexión con Google (ver sección anterior).
 
 ## Estructura de carpetas
 
