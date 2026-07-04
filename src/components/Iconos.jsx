@@ -142,11 +142,58 @@ export function IconoChevron({ tam = 16, abierto = false }) {
   )
 }
 
-// Icono según el tipo de archivo de la fuente
+export function IconoCorreo({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  )
+}
+
+export function IconoGoogle({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 12h8.5M12 12V8.5M12 12l-6 6" />
+    </svg>
+  )
+}
+
+export function IconoSincronizar({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" />
+      <path d="M20 4v4h-4M4 20v-4h4" />
+    </svg>
+  )
+}
+
+export function IconoSalir({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="M14 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H14" />
+      <path d="M10 12h10m0 0-3.5-3.5M20 12l-3.5 3.5" />
+    </svg>
+  )
+}
+
+export function IconoUsuario({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M5 20c1.3-3.2 4-4.8 7-4.8s5.7 1.6 7 4.8" />
+    </svg>
+  )
+}
+
+// Icono según el tipo de archivo o conexión de la fuente
 export function IconoTipoArchivo({ tipo, tam = 18 }) {
   if (tipo === 'excel') return <IconoTabla tam={tam} />
   if (tipo === 'pdf') return <IconoDocumento tam={tam} />
-  if (tipo === 'calendario') return <IconoCalendario tam={tam} />
+  if (tipo === 'calendario' || tipo === 'gcalendar') return <IconoCalendario tam={tam} />
   if (tipo === 'texto') return <IconoTexto tam={tam} />
+  if (tipo === 'gmail') return <IconoCorreo tam={tam} />
+  if (tipo === 'gsheets') return <IconoTabla tam={tam} />
   return <IconoImagen tam={tam} />
 }

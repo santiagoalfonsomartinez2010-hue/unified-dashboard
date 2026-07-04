@@ -75,7 +75,15 @@ function extraerJson(texto) {
 }
 
 // Llamada base a Gemini: system_instruction + partes del usuario → JSON parseado
-async function llamarGemini(apiKey, instruccion, partes) {
+function llamarGemini(apiKey, instruccion, partes) {
+  return llamarGeminiContents(apiKey, instruccion, [{ role: 'user', parts: partes }])
+}
+
+/*
+  Variante con historial completo de turnos (para el chatbot). "contents" es
+  una lista [{ role: 'user' | 'model', parts: [{ text }] }].
+*/
+export async function llamarGeminiContents(apiKey, instruccion, contents) {
   if (!apiKey) {
     throw new Error(
       'Falta la API key de Gemini. Añádela desde el botón "API key" de la barra lateral (es gratuita en aistudio.google.com).'
@@ -84,7 +92,7 @@ async function llamarGemini(apiKey, instruccion, partes) {
 
   const cuerpo = {
     system_instruction: { parts: [{ text: instruccion }] },
-    contents: [{ role: 'user', parts: partes }],
+    contents,
     generationConfig: { maxOutputTokens: 8192 },
   }
 
@@ -148,6 +156,64 @@ export async function analizarFuente(file, tipoArchivo, apiKey) {
   if (!Array.isArray(resultado.registros)) resultado.registros = []
   if (!Array.isArray(resultado.eventos)) resultado.eventos = []
   if (!Array.isArray(resultado.metricas)) resultado.metricas = []
+  return resultado
+}
+
+/*
+  Analiza una fuente que ya viene como texto (correos de Gmail, eventos de
+  Google Calendar, una hoja de Google Sheets…). Mismo formato de salida que
+  analizarFuente.
+*/
+export async function analizarFuenteTexto(nombre, texto, apiKey) {
+  const resultado = await llamarGemini(apiKey, INSTRUCCION_FUENTE, [
+    { text: `Contenido de la fuente conectada "${nombre}":\n${texto}` },
+  ])
+  if (!resultado.titulo) resultado.titulo = nombre
+  if (!CATEGORIAS.includes(resultado.categoria)) resultado.categoria = 'otros'
+  if (!Array.isArray(resultado.columnas)) resultado.columnas = []
+  if (!Array.isArray(resultado.registros)) resultado.registros = []
+  if (!Array.isArray(resultado.eventos)) resultado.eventos = []
+  if (!Array.isArray(resultado.metricas)) resultado.metricas = []
+  return resultado
+}
+
+const INSTRUCCION_TIPO = `Eres el analista de Empleia. Recibes los resúmenes de todas las fuentes de datos
+que un usuario ha conectado a su panel. Tu trabajo es deducir QUÉ TIPO DE DASHBOARD está intentando montar:
+qué clase de organización o actividad hay detrás de esos datos (una peluquería, un gimnasio, el control de
+pagos de un negocio, una tienda con inventario, la gestión de un equipo, las finanzas personales…).
+Devuelve SOLO un JSON válido (sin texto adicional, sin markdown) con esta estructura exacta:
+{
+  "tipo": "nombre corto del tipo de panel, máx. 5 palabras (ej: 'Panel de pagos', 'Gestión de peluquería', 'Control de gimnasio')",
+  "emoji": "un único emoji que represente ese tipo",
+  "descripcion": "1 frase explicando qué se organiza en este panel y para qué sirve",
+  "confianza": "alta" | "media" | "baja"
+}
+Si las fuentes son demasiado variadas o escasas para saberlo, usa confianza "baja" y un tipo genérico
+como "Panel de organización general". Escribe en español.`
+
+/*
+  Detecta el tipo de dashboard que el usuario está montando (peluquería,
+  gimnasio, pagos…) a partir de todas las fuentes procesadas.
+  Devuelve { tipo, emoji, descripcion, confianza }.
+*/
+export async function detectarTipoPanel(fuentes, apiKey) {
+  const descripcion = fuentes
+    .map((f, i) => {
+      const r = f.resultado
+      return `Fuente ${i + 1} — "${r.titulo}" (categoría: ${r.categoria}). ${r.resumen}
+Columnas: ${(r.columnas || []).join(', ') || 'ninguna'}. Métricas: ${(r.metricas || [])
+        .map((m) => `${m.etiqueta}: ${m.valor}`)
+        .join('; ') || 'ninguna'}`
+    })
+    .join('\n\n')
+
+  const resultado = await llamarGemini(apiKey, INSTRUCCION_TIPO, [
+    { text: `Fuentes conectadas al panel:\n\n${descripcion}` },
+  ])
+  if (!resultado.tipo) throw new Error('No se pudo detectar el tipo de panel')
+  if (!resultado.emoji) resultado.emoji = '📊'
+  if (!resultado.descripcion) resultado.descripcion = ''
+  if (!['alta', 'media', 'baja'].includes(resultado.confianza)) resultado.confianza = 'media'
   return resultado
 }
 

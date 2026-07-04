@@ -1,57 +1,110 @@
-# Empleia · Panel Unificado (demo)
+# Empleia · Panel Unificado
 
-Demo en forma de página web de la idea: **todos tus datos esparcidos, en un
-solo dashboard**. Subes Excels, PDFs, imágenes, calendarios (.ics) o JSON, la
-IA de Google Gemini los lee, los normaliza y los organiza automáticamente en
-un panel con cifras clave, gráficos, agenda unificada y un resumen inteligente.
-
-> Sigue la línea del "empleado de Onboarding" de Empleia, pero aquí **sin
-> Supabase ni ningún backend**: solo el navegador + la API gratuita de Gemini.
-> Todo se guarda en `localStorage`.
-
-## Qué resuelve
-
-En vez de tener la facturación en un Excel, el equipo en un PDF, las citas en
-un calendario y el inventario en una foto de la pizarra, lo subes todo aquí y
-obtienes **un único panel organizado** con todo cruzado.
+**Todos tus datos esparcidos, en un solo dashboard.** Subes Excels, PDFs,
+imágenes, calendarios (.ics) o JSON, o conectas directamente tu cuenta de
+Google (Gmail, Calendar, Sheets), y la IA de Google Gemini lo lee todo, lo
+normaliza y lo organiza automáticamente en un panel con cifras clave,
+gráficos, agenda unificada, resumen inteligente y un chatbot que responde
+preguntas y edita el panel por ti.
 
 ## Qué hace
 
-1. **Subida de archivos** (clic o arrastrar): Excel/CSV (se parsean con
-   `xlsx`), PDF e imágenes (van en base64, Gemini los lee por visión/OCR),
-   calendarios `.ics`, JSON y texto.
-2. **Análisis con Gemini:** cada archivo vuelve normalizado como
-   `{ titulo, categoria, resumen, columnas, registros, eventos, metricas }`.
-3. **Dashboard unificado:** KPIs, registros por fuente (barras), reparto por
-   categoría (barra apilada), próximos eventos de TODAS las fuentes en una
-   agenda única y una tarjeta por fuente con su tabla desplegable.
-4. **Resumen inteligente:** una segunda llamada a Gemini cruza todas las
+1. **Cuentas e inicio de sesión (Supabase):** antes de crear un dashboard hay
+   que crear cuenta e iniciar sesión. Los paneles se guardan en la nube por
+   usuario, así que puedes abrir la app en otro dispositivo y seguir donde lo
+   dejaste. Se pueden tener varios paneles y cambiar entre ellos desde la
+   barra lateral. (Sin Supabase configurado, la app ofrece un "modo local"
+   que guarda solo en el navegador.)
+2. **Subida de archivos** (clic o arrastrar): Excel/CSV (se parsean con
+   `xlsx`), PDF e imágenes (Gemini los lee por visión/OCR), calendarios
+   `.ics`, JSON y texto.
+3. **Conexión oficial con Google:** con un clic se abre la ventana OAuth de
+   Google (permisos de solo lectura) y puedes importar como fuentes del
+   panel tus **correos de Gmail** (últimos 30 días), los **eventos de Google
+   Calendar** y cualquiera de tus **hojas de Google Sheets**. El botón
+   "Sincronizar Google" las vuelve a leer para que el dashboard se mantenga
+   al día.
+4. **La IA entiende tu dashboard:** además de normalizar cada fuente
+   (`{ titulo, categoria, resumen, columnas, registros, eventos, metricas }`),
+   Gemini detecta **qué tipo de dashboard estás montando** — un panel de
+   pagos, la gestión de una peluquería, un gimnasio… — y lo muestra en la
+   cabecera con su descripción.
+5. **Dashboard unificado:** KPIs, registros por fuente, reparto por
+   categoría, próximos eventos de TODAS las fuentes en una agenda única y una
+   tarjeta por fuente con su tabla desplegable.
+6. **Resumen inteligente:** una llamada extra a Gemini cruza todas las
    fuentes y devuelve titular, observaciones y acciones recomendadas.
-5. **Modo ejemplo:** botón "Datos de ejemplo" para enseñar la demo completa
-   **sin API key** ni archivos reales.
+7. **Chatbot inteligente:** un asistente flotante (funciona con la API key de
+   Gemini de cada usuario) que:
+   - responde preguntas sobre los datos del panel («¿cuántos proveedores
+     nuevos han llegado esta semana?»),
+   - edita el estilo visual (tema claro/oscuro, color de acento),
+   - edita la información (renombra el panel o las fuentes, corrige métricas,
+     edita tablas y eventos, quita fuentes…).
+8. **Modo ejemplo:** botón "Datos de ejemplo" para ver la demo completa sin
+   API key ni archivos reales.
 
-## API key de Gemini
+## Configuración
 
-Se puede configurar de dos formas (la del `.env` tiene prioridad):
+Copia `.env.example` a `.env` y rellena lo que vayas a usar. Las tres
+integraciones son independientes: cada una se activa con sus variables.
 
-- Desde la propia interfaz (botón "API key" de la barra lateral): se guarda en
-  el `localStorage` del navegador. Es lo cómodo para la demo.
-- Con `.env`: copia `.env.example` a `.env` y rellena `VITE_GEMINI_API_KEY`.
+### 1. Supabase — cuentas y guardado en la nube
 
-La key gratuita se crea en <https://aistudio.google.com/apikey>.
+1. Crea un proyecto gratuito en <https://supabase.com>.
+2. En el **SQL Editor**, ejecuta el contenido de [`supabase/schema.sql`](supabase/schema.sql)
+   (crea la tabla `paneles` con Row Level Security por usuario).
+3. En **Settings → API**, copia la URL y la `anon key` a:
+   ```
+   VITE_SUPABASE_URL=...
+   VITE_SUPABASE_ANON_KEY=...
+   ```
+4. Opcional: en **Authentication → Providers → Email** puedes desactivar
+   "Confirm email" para que las cuentas entren sin verificación (útil en
+   demos).
 
-> ⚠️ **Seguridad:** al no haber backend, la key viaja/vive en el navegador.
-> Úsala solo para la demo; en producción la llamada a Gemini debe moverse a
-> una función serverless.
+### 2. Google — Gmail, Calendar y Sheets
+
+1. En <https://console.cloud.google.com> crea un proyecto y activa las APIs:
+   **Gmail API, Google Calendar API, Google Sheets API y Google Drive API**.
+2. Configura la pantalla de consentimiento OAuth (tipo External; añade tu
+   cuenta como test user mientras la app no esté verificada).
+3. Crea unas credenciales **OAuth Client ID → Web application** y añade los
+   orígenes autorizados de JavaScript: `http://localhost:5173` y tu dominio
+   de producción (p. ej. el de Vercel).
+4. Copia el client id a:
+   ```
+   VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   ```
+
+La conexión pide solo permisos de **lectura** (gmail.readonly,
+calendar.readonly, spreadsheets.readonly, drive.metadata.readonly) y el token
+vive en el navegador (~1 hora); nunca pasa por ningún servidor propio.
+
+### 3. Gemini — la IA
+
+Cada usuario puede poner su propia API key desde el botón "API key" de la
+barra lateral (se guarda en su navegador), o puedes fijarla para todos con
+`VITE_GEMINI_API_KEY`. La key gratuita se crea en
+<https://aistudio.google.com/apikey>.
+
+> ⚠️ **Seguridad:** al no haber backend propio, la key de Gemini viaja/vive
+> en el navegador. Para producción de verdad, mueve la llamada a Gemini a una
+> función serverless.
 
 ## Tecnología
 
-- **React + Vite** (sin más dependencias de datos: nada de Supabase)
+- **React + Vite**
+- **Supabase** (`@supabase/supabase-js`): autenticación email+contraseña y
+  tabla `paneles` (JSONB) con RLS
+- **Google Identity Services** (OAuth en el navegador) + APIs REST de Gmail,
+  Calendar, Sheets y Drive
 - **xlsx** para parsear Excel/CSV en el navegador
 - **API de Google Gemini** (`gemini-2.5-flash-lite` por defecto, configurable
-  con `VITE_GEMINI_MODEL`)
-- Tipografía **Inter**, interfaz íntegramente en **español**, tema oscuro de
-  Empleia (referencia visual del layout: el panel de lovable.dev)
+  con `VITE_GEMINI_MODEL`): análisis de fuentes, detección del tipo de panel,
+  resumen global y chatbot
+- Interfaz íntegramente en **español**, tema oscuro/claro con acento
+  personalizable (el chatbot puede cambiarlo)
 
 ## Scripts
 
@@ -62,38 +115,48 @@ npm run build    # build de producción
 npm run preview  # previsualizar el build
 ```
 
-## Deploy a Vercel (probar en iPad o cualquier dispositivo)
+## Deploy a Vercel
 
 Importa el repo en Vercel apuntando a la rama
-`claude/unified-data-dashboard-s9d8cd`. Detecta Vite solo y no necesita
-ninguna variable de entorno obligatoria (la API key se puede meter desde la
-interfaz). Si prefieres dejarla fija, añade `VITE_GEMINI_API_KEY` en Vercel y
-pulsa **Redeploy** (Vite incrusta las variables en tiempo de build).
+`claude/ai-dashboard-gmail-chatbot-6kttjp`. Añade en **Settings →
+Environment Variables** las variables del `.env` que uses
+(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GOOGLE_CLIENT_ID` y
+opcionalmente `VITE_GEMINI_API_KEY`) y pulsa **Redeploy** (Vite incrusta las
+variables en tiempo de build). Recuerda añadir el dominio de Vercel a los
+orígenes autorizados del OAuth Client ID de Google.
 
 ## Estructura de carpetas
 
 ```
+supabase/
+  schema.sql                 Tabla "paneles" + políticas RLS (ejecutar en Supabase)
 src/
-  App.jsx                    Estado y lógica principal (subida, análisis, resumen)
-  index.css                  Sistema de diseño compartido de Empleia (tokens)
+  App.jsx                    Estado y lógica principal (sesión, paneles, fuentes, chatbot)
+  index.css                  Sistema de diseño (tokens, tema oscuro y claro)
   lib/
-    gemini.js                Llamadas a Gemini: analizar fuente + resumen global
+    gemini.js                Gemini: analizar fuentes, detectar tipo de panel, resumen
+    chatbot.js               Chatbot: contexto del panel + acciones que puede ejecutar
+    supabase.js              Cuentas y guardado de paneles en la nube
+    google.js                OAuth de Google + lectores de Gmail/Calendar/Sheets
     parseArchivo.js          Parseo de Excel/CSV, .ics/texto y base64
-    categorias.js            Categorías fijas del panel y su color (paleta validada)
-    almacen.js               Persistencia en localStorage (fuentes, resumen, key)
+    categorias.js            Categorías fijas del panel y su color
+    almacen.js               Persistencia local (modo local y API key)
     ejemplo.js               Datos simulados del modo ejemplo
     visuales.js              Colores estables por nombre (avatares)
   components/
-    Sidebar.jsx              Columna izquierda: navegación, fuentes, estado API key
-    Hero.jsx                 Cabecera con degradado + zona de subida (drag & drop)
-    Panel.jsx                Dashboard: agrega fuentes y reparte a los subcomponentes
+    PantallaAcceso.jsx       Crear cuenta / iniciar sesión (obligatorio)
+    Sidebar.jsx              Selector de paneles, acciones, fuentes, cuenta
+    ConexionesGoogle.jsx     Modal de conexión con Gmail/Calendar/Sheets
+    Chatbot.jsx              Asistente flotante (preguntas + edición del panel)
+    Hero.jsx                 Cabecera con degradado + zona de subida
+    Panel.jsx                Dashboard: tipo detectado, KPIs, gráficos, fuentes
     Kpis.jsx                 Fila de cifras clave
     GraficoFuentes.jsx       Barras de registros por fuente
     GraficoCategorias.jsx    Barra apilada de registros por categoría
     ProximosEventos.jsx      Agenda unificada de todas las fuentes
-    ResumenIA.jsx            Resumen inteligente (segunda llamada a Gemini)
+    ResumenIA.jsx            Resumen inteligente global
     TarjetaFuente.jsx        Tarjeta por fuente con métricas y tabla desplegable
-    ModalApiKey.jsx          Modal para introducir la API key
+    ModalApiKey.jsx          Modal para introducir la API key de Gemini
     Iconos.jsx               Iconos SVG inline
     ErrorBoundary.jsx        Pantalla de error legible si algo revienta
 ```

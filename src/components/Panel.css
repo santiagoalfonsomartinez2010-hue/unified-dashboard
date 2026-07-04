@@ -147,3 +147,9 @@
     padding: 4px 16px 48px;
   }
 }
+
+/* Tipo de dashboard detectado por la IA */
+.panel-tipo {
+  color: var(--color-violeta);
+  font-weight: 600;
+}

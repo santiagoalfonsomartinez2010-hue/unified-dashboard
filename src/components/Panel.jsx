@@ -15,6 +15,9 @@ import './Panel.css'
 export default function Panel({
   fuentes,
   resumen,
+  nombrePanel,
+  tipoPanel,
+  detectandoTipo,
   generandoResumen,
   avisoResumen,
   onGenerarResumen,
@@ -76,11 +79,22 @@ export default function Panel({
     <section className="panel">
       <div className="panel-cabecera">
         <div>
-          <h2>Panel unificado</h2>
-          <p className="panel-cabecera-sub">
-            {listas.length} {listas.length === 1 ? 'fuente conectada' : 'fuentes conectadas'} ·
-            actualizado al subir cada archivo
-          </p>
+          <h2>
+            {tipoPanel?.emoji ? `${tipoPanel.emoji} ` : ''}
+            {nombrePanel || 'Panel unificado'}
+          </h2>
+          {tipoPanel ? (
+            <p className="panel-cabecera-sub">
+              <span className="panel-tipo">{tipoPanel.tipo}</span>
+              {tipoPanel.descripcion ? ` — ${tipoPanel.descripcion}` : ''}
+            </p>
+          ) : (
+            <p className="panel-cabecera-sub">
+              {detectandoTipo
+                ? 'La IA está detectando qué tipo de dashboard estás montando…'
+                : `${listas.length} ${listas.length === 1 ? 'fuente conectada' : 'fuentes conectadas'} · actualizado al subir cada archivo`}
+            </p>
+          )}
         </div>
         <button className="boton-secundario" type="button" onClick={onPedirArchivos}>
           <IconoMas tam={16} /> Añadir datos

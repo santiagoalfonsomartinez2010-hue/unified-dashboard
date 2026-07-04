@@ -36,6 +36,30 @@
   color-scheme: dark;
 }
 
+/*
+  Tema claro: el chatbot puede cambiarlo con la acción "cambiar_tema"
+  (App pone data-tema="claro" en <html>). El color de acento se sobrescribe
+  aparte con --color-violeta / --violeta-tinte vía JavaScript.
+*/
+:root[data-tema='claro'] {
+  --color-fondo: #f3f4f8;
+  --color-card: #ffffff;
+  --color-card-hover: #eef0f6;
+  --color-borde: #dfe2ec;
+
+  --color-texto: #1a1d29;
+  --color-texto-suave: #4b5165;
+  --color-texto-tenue: #7b8199;
+
+  --sombra: 0 8px 24px rgba(24, 28, 45, 0.1);
+
+  color-scheme: light;
+}
+
+:root[data-tema='claro'] ::-webkit-scrollbar-thumb:hover {
+  background: #c3c8d8;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

@@ -133,6 +133,18 @@ export function fuentesDeEjemplo() {
   ]
 }
 
+// Tipo de dashboard que la IA habría detectado para las fuentes de ejemplo
+export function tipoPanelDeEjemplo() {
+  return {
+    tipo: 'Gestión de negocio de instalaciones',
+    emoji: '🔧',
+    descripcion:
+      'Organiza la facturación, el equipo, las citas y el inventario de un negocio de instalaciones y reformas.',
+    confianza: 'alta',
+    esEjemplo: true,
+  }
+}
+
 export function resumenDeEjemplo() {
   return {
     titular:

@@ -7,6 +7,7 @@
 const CLAVE_FUENTES = 'empleia.panel.fuentes'
 const CLAVE_RESUMEN = 'empleia.panel.resumen'
 const CLAVE_API_KEY = 'empleia.panel.gemini_key'
+const CLAVE_EXTRAS = 'empleia.panel.extras'
 
 function leer(clave, porDefecto) {
   try {
@@ -64,10 +65,20 @@ export function guardarApiKey(key) {
   }
 }
 
+// Extras del panel en modo local: { nombrePanel, tipoPanel, tema }
+export function cargarExtras() {
+  return leer(CLAVE_EXTRAS, null)
+}
+
+export function guardarExtras(extras) {
+  escribir(CLAVE_EXTRAS, extras)
+}
+
 export function vaciarTodo() {
   try {
     localStorage.removeItem(CLAVE_FUENTES)
     localStorage.removeItem(CLAVE_RESUMEN)
+    localStorage.removeItem(CLAVE_EXTRAS)
   } catch {
     // nada que limpiar
   }

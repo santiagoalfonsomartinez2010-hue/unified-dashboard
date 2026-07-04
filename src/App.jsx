@@ -3,52 +3,261 @@ import Sidebar from './components/Sidebar'
 import Hero from './components/Hero'
 import Panel from './components/Panel'
 import ModalApiKey from './components/ModalApiKey'
+import PantallaAcceso from './components/PantallaAcceso'
+import ConexionesGoogle from './components/ConexionesGoogle'
+import Chatbot from './components/Chatbot'
 import { inferirTipoArchivo } from './lib/parseArchivo'
-import { analizarFuente, generarResumenGlobal } from './lib/gemini'
+import {
+  analizarFuente,
+  analizarFuenteTexto,
+  generarResumenGlobal,
+  detectarTipoPanel,
+  CATEGORIAS,
+} from './lib/gemini'
+import {
+  supabaseDisponible,
+  obtenerSesion,
+  alCambiarSesion,
+  cerrarSesion,
+  listarPaneles,
+  cargarPanel,
+  crearPanel,
+  guardarPanel,
+  borrarPanel,
+} from './lib/supabase'
+import {
+  tokenGoogle,
+  conectarGoogle,
+  leerCorreosGmail,
+  leerEventosCalendar,
+  leerHojaCalculo,
+} from './lib/google'
 import {
   cargarFuentes,
   guardarFuentes,
   cargarResumen,
   guardarResumen,
+  cargarExtras,
+  guardarExtras,
   cargarApiKey,
   guardarApiKey,
   vaciarTodo,
 } from './lib/almacen'
-import { fuentesDeEjemplo, resumenDeEjemplo } from './lib/ejemplo'
+import { fuentesDeEjemplo, resumenDeEjemplo, tipoPanelDeEjemplo } from './lib/ejemplo'
 import './App.css'
 
 /*
-  Panel Unificado de Empleia (demo).
+  Panel Unificado de Empleia.
 
-  Flujo: el usuario sube archivos sueltos (Excel, PDF, imágenes, calendarios…),
-  cada uno se manda a la API de Gemini, que lo devuelve normalizado (título,
-  categoría, tabla, eventos y métricas), y el panel agrega todas las fuentes en
-  un único dashboard. Sin backend: la persistencia es localStorage.
+  Flujo: el usuario crea una cuenta e inicia sesión (los dashboards se guardan
+  en Supabase y se pueden abrir desde cualquier dispositivo), sube archivos
+  (Excel, PDF, imágenes, calendarios…) o conecta Gmail / Google Calendar /
+  Google Sheets, y la IA de Gemini lo normaliza todo en un solo dashboard.
+  La IA detecta además QUÉ tipo de dashboard se está montando (una peluquería,
+  un gimnasio, el control de pagos…) y un chatbot integrado responde preguntas
+  sobre los datos y edita el panel (estilo visual, nombres, tablas…).
 */
 
 let contadorId = 0
 const nuevoId = () => `f-${Date.now()}-${contadorId++}`
 
+const TEMA_POR_DEFECTO = { modo: 'oscuro', acento: '#6366f1' }
+
+// Convierte un color #rrggbb en su tinte translúcido para badges y fondos
+function tinteDeAcento(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, 0.12)`
+}
+
 export default function App() {
-  const [fuentes, setFuentes] = useState(() => cargarFuentes())
-  const [resumen, setResumen] = useState(() => cargarResumen())
+  // Sesión y modo de persistencia
+  const [sesion, setSesion] = useState(undefined) // undefined = comprobando
+  const [modoLocal, setModoLocal] = useState(false)
+  const [estadoGuardado, setEstadoGuardado] = useState(null)
+
+  // Paneles del usuario (en la nube) y panel activo
+  const [paneles, setPaneles] = useState([])
+  const [panelId, setPanelId] = useState(null)
+  const [cargandoPaneles, setCargandoPaneles] = useState(false)
+  const [errorNube, setErrorNube] = useState(null)
+
+  // Contenido del panel activo
+  const [nombrePanel, setNombrePanel] = useState('Mi panel')
+  const [fuentes, setFuentes] = useState([])
+  const [resumen, setResumen] = useState(null)
+  const [tipoPanel, setTipoPanel] = useState(null)
+  const [tema, setTema] = useState(TEMA_POR_DEFECTO)
+
+  // IA y modales
   const [apiKey, setApiKey] = useState(() => cargarApiKey())
   const [modalKeyAbierto, setModalKeyAbierto] = useState(false)
+  const [modalGoogleAbierto, setModalGoogleAbierto] = useState(false)
   const [generandoResumen, setGenerandoResumen] = useState(false)
   const [avisoResumen, setAvisoResumen] = useState(null)
+  const [detectandoTipo, setDetectandoTipo] = useState(false)
+  const [sincronizando, setSincronizando] = useState(false)
 
   const inputArchivosRef = useRef(null)
   const panelRef = useRef(null)
+  const omitirGuardado = useRef(true) // evita re-guardar justo tras cargar un panel
 
-  // Persistencia automática en localStorage
-  useEffect(() => {
-    guardarFuentes(fuentes)
-  }, [fuentes])
-  useEffect(() => {
-    guardarResumen(resumen)
-  }, [resumen])
+  /* ---------- Sesión ---------- */
 
-  // Abre el selector de archivos (pidiendo antes la API key si falta)
+  useEffect(() => {
+    if (!supabaseDisponible) {
+      setSesion(null)
+      return
+    }
+    obtenerSesion().then(setSesion)
+    return alCambiarSesion(setSesion)
+  }, [])
+
+  // Al iniciar sesión, carga la lista de paneles del usuario (o crea el primero)
+  const usuarioId = sesion?.user?.id
+  useEffect(() => {
+    if (!usuarioId) return
+    let cancelado = false
+    setCargandoPaneles(true)
+    setErrorNube(null)
+    ;(async () => {
+      try {
+        let lista = await listarPaneles()
+        if (lista.length === 0) {
+          const p = await crearPanel('Mi panel', {})
+          lista = [{ id: p.id, nombre: p.nombre }]
+        }
+        if (cancelado) return
+        setPaneles(lista)
+        await abrirPanel(lista[0].id)
+      } catch (error) {
+        if (!cancelado) setErrorNube(error.message)
+      } finally {
+        if (!cancelado) setCargandoPaneles(false)
+      }
+    })()
+    return () => {
+      cancelado = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioId])
+
+  async function abrirPanel(id) {
+    const p = await cargarPanel(id)
+    const d = p.datos || {}
+    omitirGuardado.current = true
+    setPanelId(p.id)
+    setNombrePanel(p.nombre || 'Mi panel')
+    setFuentes((d.fuentes || []).filter((f) => f.estado !== 'procesando'))
+    setResumen(d.resumen || null)
+    setTipoPanel(d.tipoPanel || null)
+    setTema(d.tema || TEMA_POR_DEFECTO)
+    setAvisoResumen(null)
+    setEstadoGuardado('guardado')
+  }
+
+  function entrarModoLocal() {
+    omitirGuardado.current = true
+    setModoLocal(true)
+    setFuentes(cargarFuentes())
+    setResumen(cargarResumen())
+    const extras = cargarExtras()
+    if (extras) {
+      setNombrePanel(extras.nombrePanel || 'Mi panel')
+      setTipoPanel(extras.tipoPanel || null)
+      setTema(extras.tema || TEMA_POR_DEFECTO)
+    }
+    setEstadoGuardado('local')
+  }
+
+  async function salir() {
+    await cerrarSesion()
+    omitirGuardado.current = true
+    setPaneles([])
+    setPanelId(null)
+    setNombrePanel('Mi panel')
+    setFuentes([])
+    setResumen(null)
+    setTipoPanel(null)
+    setTema(TEMA_POR_DEFECTO)
+  }
+
+  /* ---------- Guardado automático (nube o local) ---------- */
+
+  useEffect(() => {
+    if (omitirGuardado.current) {
+      omitirGuardado.current = false
+      return
+    }
+    if (modoLocal) {
+      guardarFuentes(fuentes)
+      guardarResumen(resumen)
+      guardarExtras({ nombrePanel, tipoPanel, tema })
+      return
+    }
+    if (!panelId) return
+    setEstadoGuardado('guardando')
+    const temporizador = setTimeout(async () => {
+      try {
+        await guardarPanel(panelId, nombrePanel, { fuentes, resumen, tipoPanel, tema })
+        setEstadoGuardado('guardado')
+      } catch {
+        setEstadoGuardado('error')
+      }
+    }, 1200)
+    return () => clearTimeout(temporizador)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fuentes, resumen, tipoPanel, tema, nombrePanel, panelId, modoLocal])
+
+  /* ---------- Tema visual (el chatbot puede cambiarlo) ---------- */
+
+  useEffect(() => {
+    const raiz = document.documentElement
+    if (tema.modo === 'claro') raiz.setAttribute('data-tema', 'claro')
+    else raiz.removeAttribute('data-tema')
+    if (/^#[0-9a-f]{6}$/i.test(tema.acento || '')) {
+      raiz.style.setProperty('--color-violeta', tema.acento)
+      raiz.style.setProperty('--violeta-tinte', tinteDeAcento(tema.acento))
+    }
+  }, [tema])
+
+  /* ---------- Detección del tipo de dashboard ---------- */
+
+  const listas = fuentes.filter((f) => f.estado === 'listo')
+  const claveFuentes = listas
+    .map((f) => f.id)
+    .sort()
+    .join('|')
+
+  useEffect(() => {
+    if (!claveFuentes || !apiKey) return
+    if (tipoPanel?.esEjemplo || tipoPanel?.clave === claveFuentes) return
+    let cancelado = false
+    setDetectandoTipo(true)
+    const temporizador = setTimeout(async () => {
+      try {
+        const detectado = await detectarTipoPanel(
+          fuentes.filter((f) => f.estado === 'listo'),
+          apiKey
+        )
+        if (!cancelado) setTipoPanel({ ...detectado, clave: claveFuentes })
+      } catch {
+        // la detección es un extra: si falla, el panel sigue funcionando
+      } finally {
+        if (!cancelado) setDetectandoTipo(false)
+      }
+    }, 800)
+    return () => {
+      cancelado = true
+      clearTimeout(temporizador)
+      setDetectandoTipo(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveFuentes, apiKey])
+
+  /* ---------- Archivos subidos ---------- */
+
   function pedirArchivos() {
     if (!apiKey) {
       setModalKeyAbierto(true)
@@ -57,11 +266,7 @@ export default function App() {
     inputArchivosRef.current?.click()
   }
 
-  /*
-    Procesa una lista de archivos: crea cada fuente en estado "procesando" y
-    las analiza en serie (la capa gratuita de Gemini limita las peticiones por
-    minuto, así que en paralelo fallarían con lotes grandes).
-  */
+  // Analiza los archivos en serie (la capa gratuita de Gemini limita el ritmo)
   async function procesarArchivos(lista) {
     const archivos = Array.from(lista || [])
     if (archivos.length === 0) return
@@ -95,10 +300,102 @@ export default function App() {
     }
   }
 
-  // Resumen global: cruza todas las fuentes ya procesadas con una segunda llamada
+  /* ---------- Fuentes de Google (Gmail, Calendar, Sheets) ---------- */
+
+  /*
+    Importa (o re-sincroniza) una fuente de Google. referencia:
+    { tipo: 'gmail' } | { tipo: 'calendar' } | { tipo: 'sheet', spreadsheetId, nombre }
+  */
+  async function importarGoogle(referencia) {
+    if (!apiKey) {
+      setModalKeyAbierto(true)
+      return
+    }
+    let token = tokenGoogle()
+    if (!token) {
+      try {
+        token = await conectarGoogle()
+      } catch (error) {
+        window.alert(error.message)
+        return
+      }
+    }
+
+    const id =
+      referencia.tipo === 'gmail'
+        ? 'google-gmail'
+        : referencia.tipo === 'calendar'
+          ? 'google-calendar'
+          : `google-sheet-${referencia.spreadsheetId}`
+    const nombre =
+      referencia.tipo === 'gmail'
+        ? 'Gmail'
+        : referencia.tipo === 'calendar'
+          ? 'Google Calendar'
+          : referencia.nombre || 'Google Sheets'
+    const tipoArchivo =
+      referencia.tipo === 'gmail' ? 'gmail' : referencia.tipo === 'calendar' ? 'gcalendar' : 'gsheets'
+
+    setFuentes((previas) => {
+      const meta = {
+        id,
+        nombreArchivo: nombre,
+        tipoArchivo,
+        origen: 'google',
+        googleRef: referencia,
+        estado: 'procesando',
+        creado: Date.now(),
+      }
+      return previas.some((f) => f.id === id)
+        ? previas.map((f) => (f.id === id ? { ...f, ...meta, resultado: f.resultado } : f))
+        : [...previas, meta]
+    })
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    try {
+      let texto
+      let titulo = nombre
+      if (referencia.tipo === 'gmail') {
+        texto = await leerCorreosGmail(token)
+      } else if (referencia.tipo === 'calendar') {
+        texto = await leerEventosCalendar(token)
+      } else {
+        const hoja = await leerHojaCalculo(token, referencia.spreadsheetId)
+        texto = hoja.texto
+        titulo = hoja.titulo
+      }
+      const resultado = await analizarFuenteTexto(titulo, texto, apiKey)
+      setFuentes((previas) =>
+        previas.map((f) =>
+          f.id === id ? { ...f, estado: 'listo', resultado, sincronizado: Date.now() } : f
+        )
+      )
+    } catch (error) {
+      setFuentes((previas) =>
+        previas.map((f) => (f.id === id ? { ...f, estado: 'error', error: error.message } : f))
+      )
+    }
+  }
+
+  // Re-sincroniza todas las fuentes de Google para tener el panel al día
+  async function sincronizarGoogle() {
+    const deGoogle = fuentes.filter((f) => f.origen === 'google' && f.googleRef)
+    if (deGoogle.length === 0) return
+    setSincronizando(true)
+    try {
+      for (const f of deGoogle) {
+        await importarGoogle(f.googleRef)
+      }
+    } finally {
+      setSincronizando(false)
+    }
+  }
+
+  /* ---------- Resumen global ---------- */
+
   async function generarResumen() {
-    const listas = fuentes.filter((f) => f.estado === 'listo')
-    if (listas.length === 0) return
+    const procesadas = fuentes.filter((f) => f.estado === 'listo')
+    if (procesadas.length === 0) return
     if (!apiKey) {
       setModalKeyAbierto(true)
       return
@@ -106,7 +403,7 @@ export default function App() {
     setGenerandoResumen(true)
     setAvisoResumen(null)
     try {
-      setResumen(await generarResumenGlobal(listas, apiKey))
+      setResumen(await generarResumenGlobal(procesadas, apiKey))
     } catch (error) {
       setAvisoResumen(error.message)
     } finally {
@@ -114,10 +411,104 @@ export default function App() {
     }
   }
 
-  // Carga las cuatro fuentes simuladas (para enseñar la demo sin API key)
+  /* ---------- Acciones del chatbot ---------- */
+
+  function editarResultado(id, editar) {
+    setFuentes((previas) =>
+      previas.map((f) =>
+        f.id === id && f.resultado ? { ...f, resultado: editar(f.resultado) } : f
+      )
+    )
+  }
+
+  function aplicarAcciones(acciones) {
+    for (const a of acciones) {
+      switch (a.tipo) {
+        case 'cambiar_tema':
+          if (a.modo === 'claro' || a.modo === 'oscuro') setTema((t) => ({ ...t, modo: a.modo }))
+          break
+        case 'cambiar_acento':
+          if (/^#[0-9a-f]{6}$/i.test(a.color || '')) setTema((t) => ({ ...t, acento: a.color }))
+          break
+        case 'renombrar_panel':
+          if (a.nombre) {
+            const nombre = String(a.nombre).slice(0, 60)
+            setNombrePanel(nombre)
+            setPaneles((prev) => prev.map((p) => (p.id === panelId ? { ...p, nombre } : p)))
+          }
+          break
+        case 'renombrar_fuente':
+          if (a.titulo) editarResultado(a.id, (r) => ({ ...r, titulo: String(a.titulo) }))
+          break
+        case 'cambiar_categoria':
+          if (CATEGORIAS.includes(a.categoria))
+            editarResultado(a.id, (r) => ({ ...r, categoria: a.categoria }))
+          break
+        case 'quitar_fuente':
+          setFuentes((previas) => previas.filter((f) => f.id !== a.id))
+          break
+        case 'editar_metricas':
+          if (Array.isArray(a.metricas))
+            editarResultado(a.id, (r) => ({ ...r, metricas: a.metricas }))
+          break
+        case 'editar_registros':
+          editarResultado(a.id, (r) => ({
+            ...r,
+            columnas: Array.isArray(a.columnas) ? a.columnas : r.columnas,
+            registros: Array.isArray(a.registros) ? a.registros.slice(0, 40) : r.registros,
+          }))
+          break
+        case 'editar_eventos':
+          if (Array.isArray(a.eventos)) editarResultado(a.id, (r) => ({ ...r, eventos: a.eventos }))
+          break
+        default:
+          break
+      }
+    }
+  }
+
+  /* ---------- Gestión de paneles ---------- */
+
+  async function nuevoPanel() {
+    const nombre = window.prompt('Nombre del nuevo panel:', 'Nuevo panel')
+    if (!nombre?.trim()) return
+    try {
+      const p = await crearPanel(nombre.trim(), {})
+      setPaneles((prev) => [{ id: p.id, nombre: p.nombre }, ...prev])
+      await abrirPanel(p.id)
+    } catch (error) {
+      window.alert(error.message)
+    }
+  }
+
+  async function cambiarPanel(id) {
+    if (id === panelId) return
+    try {
+      await abrirPanel(id)
+    } catch (error) {
+      window.alert(error.message)
+    }
+  }
+
+  async function borrarPanelActual() {
+    if (!window.confirm(`¿Borrar el panel "${nombrePanel}"? Esta acción no se puede deshacer.`))
+      return
+    try {
+      await borrarPanel(panelId)
+      const restantes = paneles.filter((p) => p.id !== panelId)
+      setPaneles(restantes)
+      if (restantes.length > 0) await abrirPanel(restantes[0].id)
+    } catch (error) {
+      window.alert(error.message)
+    }
+  }
+
+  /* ---------- Otros ---------- */
+
   function cargarEjemplo() {
     setFuentes(fuentesDeEjemplo())
     setResumen(resumenDeEjemplo())
+    setTipoPanel(tipoPanelDeEjemplo())
     setAvisoResumen(null)
     panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -126,8 +517,9 @@ export default function App() {
     if (!window.confirm('¿Vaciar el panel? Se quitarán todas las fuentes y el resumen.')) return
     setFuentes([])
     setResumen(null)
+    setTipoPanel(null)
     setAvisoResumen(null)
-    vaciarTodo()
+    if (modoLocal) vaciarTodo()
   }
 
   function quitarFuente(id) {
@@ -140,15 +532,62 @@ export default function App() {
     setModalKeyAbierto(false)
   }
 
+  /* ---------- Render ---------- */
+
+  // 1) Comprobando la sesión guardada
+  if (!modoLocal && supabaseDisponible && sesion === undefined) {
+    return <div className="app-cargando">Cargando…</div>
+  }
+
+  // 2) Sin sesión: crear cuenta / iniciar sesión (obligatorio antes de crear paneles)
+  if (!modoLocal && !sesion) {
+    return <PantallaAcceso onModoLocal={entrarModoLocal} />
+  }
+
+  // 3) Con sesión pero aún cargando los paneles de la nube
+  if (!modoLocal && !panelId) {
+    return (
+      <div className="app-cargando">
+        {errorNube ? (
+          <div className="app-cargando-error">
+            <p>{errorNube}</p>
+            <p className="app-cargando-pista">
+              ¿Has ejecutado <code>supabase/schema.sql</code> en tu proyecto de Supabase?
+            </p>
+            <button className="boton-secundario" type="button" onClick={salir}>
+              Cerrar sesión
+            </button>
+          </div>
+        ) : (
+          `${cargandoPaneles ? 'Cargando tus paneles…' : 'Preparando tu panel…'}`
+        )}
+      </div>
+    )
+  }
+
+  const panelParaChat = { nombrePanel, tipoPanel, tema, fuentes, resumen }
+
   return (
     <div className="app">
       <Sidebar
         fuentes={fuentes}
         hayApiKey={Boolean(apiKey)}
+        paneles={paneles}
+        panelId={panelId}
+        estadoGuardado={estadoGuardado}
+        usuarioEmail={sesion?.user?.email || null}
+        haySincronizables={fuentes.some((f) => f.origen === 'google')}
+        sincronizando={sincronizando}
         onAnadir={pedirArchivos}
         onEjemplo={cargarEjemplo}
         onVaciar={vaciarPanel}
         onApiKey={() => setModalKeyAbierto(true)}
+        onCambiarPanel={cambiarPanel}
+        onNuevoPanel={nuevoPanel}
+        onBorrarPanel={borrarPanelActual}
+        onConectarGoogle={() => setModalGoogleAbierto(true)}
+        onSincronizar={sincronizarGoogle}
+        onCerrarSesion={salir}
       />
 
       <main className="app-principal">
@@ -162,6 +601,9 @@ export default function App() {
           <Panel
             fuentes={fuentes}
             resumen={resumen}
+            nombrePanel={nombrePanel}
+            tipoPanel={tipoPanel}
+            detectandoTipo={detectandoTipo}
             generandoResumen={generandoResumen}
             avisoResumen={avisoResumen}
             onGenerarResumen={generarResumen}
@@ -195,6 +637,21 @@ export default function App() {
           }}
         />
       )}
+
+      {modalGoogleAbierto && (
+        <ConexionesGoogle
+          fuentes={fuentes}
+          onImportar={importarGoogle}
+          onCerrar={() => setModalGoogleAbierto(false)}
+        />
+      )}
+
+      <Chatbot
+        panel={panelParaChat}
+        apiKey={apiKey}
+        onAcciones={aplicarAcciones}
+        onPedirApiKey={() => setModalKeyAbierto(true)}
+      />
     </div>
   )
 }
