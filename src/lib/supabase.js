@@ -14,8 +14,16 @@ import { createClient } from '@supabase/supabase-js'
 
 function normalizarUrl(cruda) {
   let url = (cruda || '').trim().replace(/^["']|["']$/g, '')
-  if (url && !/^https?:\/\//.test(url)) url = `https://${url}`
-  return url
+  if (!url) return ''
+  if (!/^https?:\/\//.test(url)) url = `https://${url}`
+  // Nos quedamos solo con el origen: si el usuario pega la URL con una ruta
+  // (p. ej. https://xxx.supabase.co/rest/v1/), el SDK duplicaría rutas y la
+  // API respondería "Invalid path specified in request URL".
+  try {
+    return new URL(url).origin
+  } catch {
+    return url
+  }
 }
 
 const URL_SUPABASE = normalizarUrl(import.meta.env.VITE_SUPABASE_URL)
