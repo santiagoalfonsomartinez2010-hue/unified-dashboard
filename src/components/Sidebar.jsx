@@ -4,25 +4,30 @@ import {
   IconoChispa,
   IconoPapelera,
   IconoLlave,
-  IconoTipoArchivo,
+  IconoCalendario,
+  IconoTabla,
+  IconoCategoria,
   IconoSalir,
   IconoUsuario,
 } from './Iconos'
-import { colorCliente } from '../lib/visuales'
+import { infoCategoria } from '../lib/categorias'
 import './Sidebar.css'
 
 /*
-  Columna izquierda: logo, selector de paneles del usuario, acciones
-  principales (añadir datos, conectar Google, sincronizar…), lista de fuentes,
-  estado de la API key y la cuenta con la que se ha iniciado sesión.
+  Barra lateral estilo app: logo, selector de paneles del usuario y la
+  NAVEGACIÓN POR APARTADOS del dashboard (Resumen, Agenda, un apartado por
+  categoría de datos y Fuentes), más las acciones y la cuenta abajo.
 */
 export default function Sidebar({
   fuentes,
+  categorias,
+  vista,
   hayApiKey,
   paneles,
   panelId,
   estadoGuardado,
   usuarioEmail,
+  onVista,
   onAnadir,
   onEjemplo,
   onVaciar,
@@ -38,6 +43,10 @@ export default function Sidebar({
     error: 'Error al guardar',
     local: 'Modo local (solo este navegador)',
   }[estadoGuardado]
+
+  const numEventos = fuentes
+    .filter((f) => f.estado === 'listo')
+    .reduce((s, f) => s + (f.resultado.eventos?.length || 0), 0)
 
   return (
     <aside className="sidebar">
@@ -79,9 +88,46 @@ export default function Sidebar({
       )}
 
       <nav className="sidebar-nav">
-        <button className="sidebar-item activo" type="button">
-          <IconoPanel /> Panel
+        <button
+          className={`sidebar-item ${vista === 'resumen' ? 'activo' : ''}`}
+          type="button"
+          onClick={() => onVista('resumen')}
+        >
+          <IconoPanel /> Resumen
         </button>
+        {numEventos > 0 && (
+          <button
+            className={`sidebar-item ${vista === 'agenda' ? 'activo' : ''}`}
+            type="button"
+            onClick={() => onVista('agenda')}
+          >
+            <IconoCalendario /> Agenda
+          </button>
+        )}
+        {categorias.map((cat) => (
+          <button
+            key={cat}
+            className={`sidebar-item ${vista === `cat:${cat}` ? 'activo' : ''}`}
+            type="button"
+            onClick={() => onVista(`cat:${cat}`)}
+          >
+            <IconoCategoria categoria={cat} /> {infoCategoria(cat).etiqueta}
+          </button>
+        ))}
+        {fuentes.length > 0 && (
+          <button
+            className={`sidebar-item ${vista === 'fuentes' ? 'activo' : ''}`}
+            type="button"
+            onClick={() => onVista('fuentes')}
+          >
+            <IconoTabla /> Fuentes
+            <span className="sidebar-contador">{fuentes.length}</span>
+          </button>
+        )}
+      </nav>
+
+      <div className="sidebar-seccion">Acciones</div>
+      <nav className="sidebar-nav">
         <button className="sidebar-item" type="button" onClick={onAnadir}>
           <IconoMas /> Añadir datos
         </button>
@@ -95,28 +141,7 @@ export default function Sidebar({
         )}
       </nav>
 
-      <div className="sidebar-seccion">Fuentes conectadas</div>
-      <div className="sidebar-fuentes">
-        {fuentes.length === 0 && (
-          <p className="sidebar-vacio">
-            Aún no hay fuentes. Sube un Excel, un PDF, una imagen o un calendario.
-          </p>
-        )}
-        {fuentes.map((f) => (
-          <div className="sidebar-fuente" key={f.id} title={f.nombreArchivo}>
-            <span
-              className="sidebar-fuente-icono"
-              style={{ color: colorCliente(f.nombreArchivo) }}
-            >
-              <IconoTipoArchivo tipo={f.tipoArchivo} tam={16} />
-            </span>
-            <span className="sidebar-fuente-nombre">
-              {f.resultado?.titulo || f.nombreArchivo}
-            </span>
-            <span className={`sidebar-fuente-punto ${f.estado}`} title={f.estado} />
-          </div>
-        ))}
-      </div>
+      <div className="sidebar-hueco" />
 
       {textoGuardado && (
         <p className={`sidebar-guardado ${estadoGuardado}`}>{textoGuardado}</p>

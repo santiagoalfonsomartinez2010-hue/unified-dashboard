@@ -6,31 +6,37 @@
 */
 
 :root {
-  /* Fondos */
-  --color-fondo: #0b0d14;       /* fondo general de la app */
-  --color-card: #0f1117;        /* fondo de cards y paneles */
-  --color-card-hover: #141826;  /* hover sutil sobre cards/listas */
-  --color-borde: #1e2130;       /* bordes de cards y separadores */
+  /* Fondos (negro profundo, estilo app de referencia) */
+  --color-fondo: #0a0c10;       /* fondo general de la app */
+  --color-card: #10141b;        /* fondo de cards y paneles */
+  --color-card-hover: #171c26;  /* hover sutil sobre cards/listas */
+  --color-borde: #1d232e;       /* bordes de cards y separadores */
 
-  /* Colores de acento de marca */
-  --color-violeta: #6366f1;     /* acción principal / activo */
+  /* Colores de acento. --color-violeta es EL ACENTO configurable (el nombre
+     se mantiene por compatibilidad): por defecto verde lima. --color-onacento
+     es el color del texto que va encima del acento (lo calcula App.jsx según
+     el brillo del acento elegido). */
+  --color-violeta: #a3e635;     /* acción principal / activo */
+  --color-onacento: #0c1006;    /* texto sobre el acento */
   --color-verde: #10b981;       /* éxito / procesado / online */
   --color-amarillo: #f59e0b;    /* pendiente / advertencia */
+  --color-rojo: #f87171;        /* error / impago */
 
   /* Texto */
-  --color-texto: #e6e8ef;       /* texto principal */
-  --color-texto-suave: #9aa0b4; /* texto secundario */
-  --color-texto-tenue: #6b7185; /* etiquetas y metadatos */
+  --color-texto: #e8eaf0;       /* texto principal */
+  --color-texto-suave: #9aa3b5; /* texto secundario */
+  --color-texto-tenue: #67708a; /* etiquetas y metadatos */
 
   /* Tintes translúcidos para badges y fondos suaves */
-  --violeta-tinte: rgba(99, 102, 241, 0.12);
+  --violeta-tinte: rgba(163, 230, 53, 0.12);
   --verde-tinte: rgba(16, 185, 129, 0.12);
   --amarillo-tinte: rgba(245, 158, 11, 0.12);
+  --rojo-tinte: rgba(248, 113, 113, 0.12);
 
   /* Radios y sombras */
-  --radio: 12px;
-  --radio-sm: 8px;
-  --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --radio: 14px;
+  --radio-sm: 9px;
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.4);
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color-scheme: dark;

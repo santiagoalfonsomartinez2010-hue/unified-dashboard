@@ -108,3 +108,67 @@
   border-radius: 3px;
   flex-shrink: 0;
 }
+
+/* --- Donut (registros por categoría, estilo "mix de planes") --- */
+
+.donut {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.donut-svg {
+  width: 132px;
+  height: 132px;
+  flex-shrink: 0;
+}
+
+.donut-total {
+  font-size: 7.5px;
+  font-weight: 700;
+  fill: var(--color-texto);
+}
+
+.donut-sub {
+  font-size: 3.4px;
+  fill: var(--color-texto-tenue);
+}
+
+.donut-leyenda {
+  list-style: none;
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.donut-leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--color-texto-suave);
+}
+
+.donut-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.donut-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.donut-cifra {
+  color: var(--color-texto);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}

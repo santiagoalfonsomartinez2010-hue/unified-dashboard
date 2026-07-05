@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from './components/Sidebar'
-import Hero from './components/Hero'
 import Panel from './components/Panel'
 import ModalApiKey from './components/ModalApiKey'
 import PantallaAcceso from './components/PantallaAcceso'
@@ -8,6 +7,7 @@ import AsistenteCreacion from './components/AsistenteCreacion'
 import Chatbot from './components/Chatbot'
 import { inferirTipoArchivo } from './lib/parseArchivo'
 import { analizarFuente, analizarPanelCompleto, CATEGORIAS } from './lib/gemini'
+import { INFO_CATEGORIAS } from './lib/categorias'
 import {
   supabaseDisponible,
   obtenerSesion,
@@ -50,7 +50,7 @@ import './App.css'
 let contadorId = 0
 const nuevoId = () => `f-${Date.now()}-${contadorId++}`
 
-const TEMA_POR_DEFECTO = { modo: 'oscuro', acento: '#6366f1' }
+const TEMA_POR_DEFECTO = { modo: 'oscuro', acento: '#a3e635' }
 
 // Convierte un color #rrggbb en su tinte translúcido para badges y fondos
 function tinteDeAcento(hex) {
@@ -58,6 +58,16 @@ function tinteDeAcento(hex) {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   return `rgba(${r}, ${g}, ${b}, 0.12)`
+}
+
+// Color del texto que va SOBRE el acento: oscuro si el acento es claro
+// (verde lima) y blanco si es oscuro (violeta), para mantener el contraste.
+function colorSobreAcento(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const luminancia = 0.299 * r + 0.587 * g + 0.114 * b
+  return luminancia > 150 ? '#0c1006' : '#ffffff'
 }
 
 // Convierte los datos guardados con el formato antiguo (tipoPanel + resumen)
@@ -95,6 +105,9 @@ export default function App() {
   const [fuentes, setFuentes] = useState([])
   const [analisis, setAnalisis] = useState(null) // análisis conjunto de la IA
   const [tema, setTema] = useState(TEMA_POR_DEFECTO)
+
+  // Apartado activo del dashboard ('resumen' | 'agenda' | 'cat:<categoría>' | 'fuentes')
+  const [vista, setVista] = useState('resumen')
 
   // IA, asistente y modales
   const [apiKey, setApiKey] = useState(() => cargarApiKey())
@@ -160,6 +173,7 @@ export default function App() {
     setAnalisis(migrarAnalisis(d))
     setTema(d.tema || TEMA_POR_DEFECTO)
     setAvisoAnalisis(null)
+    setVista('resumen')
     setEstadoGuardado('guardado')
   }
 
@@ -228,6 +242,7 @@ export default function App() {
     if (/^#[0-9a-f]{6}$/i.test(tema.acento || '')) {
       raiz.style.setProperty('--color-violeta', tema.acento)
       raiz.style.setProperty('--violeta-tinte', tinteDeAcento(tema.acento))
+      raiz.style.setProperty('--color-onacento', colorSobreAcento(tema.acento))
     }
   }, [tema])
 
@@ -239,6 +254,23 @@ export default function App() {
     .map((f) => f.id)
     .sort()
     .join('|')
+
+  // Categorías de datos presentes (cada una es un apartado en la sidebar).
+  // La categoría "agenda" se excluye: sus eventos ya tienen su propio
+  // apartado Agenda y sus tablas quedan en Fuentes.
+  const categoriasPresentes = Object.keys(INFO_CATEGORIAS).filter(
+    (cat) => cat !== 'agenda' && listas.some((f) => f.resultado.categoria === cat)
+  )
+
+  // Si el apartado activo deja de existir (se quitó su última fuente), vuelve al resumen
+  useEffect(() => {
+    if (vista.startsWith('cat:') && !categoriasPresentes.includes(vista.slice(4))) {
+      setVista('resumen')
+    } else if (vista === 'fuentes' && fuentes.length === 0) {
+      setVista('resumen')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vista, claveFuentes])
 
   // Ejecuta el análisis conjunto (cruza todas las fuentes con el perfil)
   async function ejecutarAnalisis(clave) {
@@ -326,7 +358,7 @@ export default function App() {
       creado: Date.now(),
     }))
     setFuentes((previas) => [...previas, ...nuevas])
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    panelRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
 
     for (let i = 0; i < archivos.length; i++) {
       const meta = nuevas[i]
@@ -367,6 +399,7 @@ export default function App() {
       setFuentes([])
       setAnalisis(null)
       setAvisoAnalisis(null)
+      setVista('resumen')
       setAsistenteAbierto(false)
       if (archivos.length > 0) await procesarArchivos(archivos, perfilNuevo)
     } catch (error) {
@@ -472,8 +505,8 @@ export default function App() {
     setPerfil(perfilDeEjemplo())
     setAnalisis(analisisDeEjemplo())
     setAvisoAnalisis(null)
+    setVista('resumen')
     setAsistenteAbierto(false)
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function vaciarPanel() {
@@ -481,6 +514,7 @@ export default function App() {
     setFuentes([])
     setAnalisis(null)
     setAvisoAnalisis(null)
+    setVista('resumen')
     if (modoLocal) vaciarTodo()
   }
 
@@ -550,11 +584,14 @@ export default function App() {
     <div className="app">
       <Sidebar
         fuentes={fuentes}
+        categorias={categoriasPresentes}
+        vista={vista}
         hayApiKey={Boolean(apiKey)}
         paneles={paneles}
         panelId={panelId}
         estadoGuardado={estadoGuardado}
         usuarioEmail={sesion?.user?.email || null}
+        onVista={setVista}
         onAnadir={pedirArchivos}
         onEjemplo={cargarEjemplo}
         onVaciar={vaciarPanel}
@@ -565,27 +602,21 @@ export default function App() {
         onCerrarSesion={salir}
       />
 
-      <main className="app-principal">
-        <Hero
-          hayFuentes={fuentes.length > 0}
-          onArchivosSoltados={procesarArchivos}
+      <main className="app-principal" ref={panelRef}>
+        <Panel
+          vista={vista}
+          fuentes={fuentes}
+          analisis={analisis}
+          analizando={analizando}
+          avisoAnalisis={avisoAnalisis}
+          nombrePanel={nombrePanel}
+          perfil={perfil}
+          onActualizarAnalisis={actualizarAnalisis}
+          onQuitarFuente={quitarFuente}
           onPedirArchivos={pedirArchivos}
+          onArchivosSoltados={procesarArchivos}
           onEjemplo={cargarEjemplo}
         />
-        <div ref={panelRef}>
-          <Panel
-            fuentes={fuentes}
-            analisis={analisis}
-            analizando={analizando}
-            avisoAnalisis={avisoAnalisis}
-            nombrePanel={nombrePanel}
-            perfil={perfil}
-            onActualizarAnalisis={actualizarAnalisis}
-            onQuitarFuente={quitarFuente}
-            onPedirArchivos={pedirArchivos}
-            onEjemplo={cargarEjemplo}
-          />
-        </div>
       </main>
 
       {/* Selector de archivos oculto, compartido por sidebar y hero */}

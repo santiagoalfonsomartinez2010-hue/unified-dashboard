@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { IconoChispa, IconoAlerta, IconoSincronizar } from './Iconos'
 import './AnalisisIA.css'
 
 /*
-  Análisis inteligente del panel: la IA cruza TODAS las fuentes con el perfil
-  del usuario y devuelve titular, conexiones detectadas entre fuentes y
-  sugerencias. Se regenera automáticamente al añadir o quitar datos.
+  Análisis & alertas: la IA cruza TODAS las fuentes con el perfil del usuario
+  y devuelve un titular, conexiones detectadas (se muestran como alertas) y
+  sugerencias (se muestran como una lista de tareas marcables). Se regenera
+  automáticamente al añadir o quitar datos.
 */
 export default function AnalisisIA({ analisis, analizando, aviso, hayFuentes, onActualizar }) {
+  const [hechas, setHechas] = useState({})
+
   return (
     <div className="analisis">
       <div className="analisis-cabecera">
@@ -14,7 +18,7 @@ export default function AnalisisIA({ analisis, analizando, aviso, hayFuentes, on
           <span className="analisis-icono">
             <IconoChispa tam={15} />
           </span>
-          Análisis inteligente
+          Análisis & alertas
         </h3>
         {hayFuentes && (
           <button
@@ -24,7 +28,7 @@ export default function AnalisisIA({ analisis, analizando, aviso, hayFuentes, on
             disabled={analizando}
           >
             <IconoSincronizar tam={14} />
-            {analizando ? 'Analizando…' : 'Actualizar análisis'}
+            {analizando ? 'Analizando…' : 'Actualizar'}
           </button>
         )}
       </div>
@@ -57,7 +61,7 @@ export default function AnalisisIA({ analisis, analizando, aviso, hayFuentes, on
             <div className="analisis-conexiones">
               {analisis.conexiones.map((c, i) => (
                 <div className="analisis-conexion" key={i}>
-                  <span className="analisis-conexion-punto">⚡</span>
+                  <span className="analisis-conexion-punto">{i === 0 ? '⚠️' : '⚡'}</span>
                   <div>
                     {c.titulo && <strong>{c.titulo}</strong>}
                     <p>{c.texto}</p>
@@ -69,10 +73,19 @@ export default function AnalisisIA({ analisis, analizando, aviso, hayFuentes, on
 
           {analisis.sugerencias?.length > 0 && (
             <div className="analisis-sugerencias">
-              <h4>Qué hacer ahora</h4>
+              <h4>Tareas</h4>
               <ul>
                 {analisis.sugerencias.map((texto, i) => (
-                  <li key={i}>{texto}</li>
+                  <li key={i}>
+                    <label className={hechas[i] ? 'hecha' : ''}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(hechas[i])}
+                        onChange={() => setHechas((prev) => ({ ...prev, [i]: !prev[i] }))}
+                      />
+                      <span>{texto}</span>
+                    </label>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -1,0 +1,305 @@
+/* Estilos compartidos de los apartados del panel (Resumen, Agenda,
+   categorías, Fuentes) — estilo app de la referencia. */
+
+.vista {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 32px 72px;
+}
+
+.vista-rejilla-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.vista-vacia {
+  border: 1px dashed var(--color-borde);
+  border-radius: var(--radio);
+  padding: 44px 24px;
+  text-align: center;
+}
+
+.vista-vacia h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.vista-vacia p {
+  font-size: 13px;
+  color: var(--color-texto-suave);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.vista-fuentes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+/* --- Agenda por días --- */
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.agenda-dia {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.agenda-fecha {
+  width: 148px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: var(--color-card);
+  border: 1px solid var(--color-borde);
+}
+
+.agenda-fecha.hoy {
+  border-color: color-mix(in srgb, var(--color-violeta) 50%, transparent);
+  background: var(--violeta-tinte);
+}
+
+.agenda-fecha-etiqueta {
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.agenda-fecha.hoy .agenda-fecha-etiqueta {
+  color: var(--color-violeta);
+}
+
+.agenda-fecha-num {
+  font-size: 11px;
+  color: var(--color-texto-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-eventos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agenda-evento {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 10px 14px;
+  border-radius: var(--radio-sm);
+  background: var(--color-card);
+  border: 1px solid var(--color-borde);
+  border-left: 3px solid var(--color-violeta);
+}
+
+.agenda-evento strong {
+  font-size: 13.5px;
+}
+
+.agenda-evento span {
+  font-size: 11.5px;
+  color: var(--color-texto-tenue);
+}
+
+@media (max-width: 560px) {
+  .agenda-dia {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .agenda-fecha {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* --- Tablas estilo app (apartados por categoría) --- */
+
+.tabla-card {
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-card);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.tabla-card-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tabla-card-cabecera > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.tabla-card-cabecera h3 {
+  font-size: 15px;
+}
+
+.tabla-card-sub {
+  font-size: 11.5px;
+  color: var(--color-texto-tenue);
+}
+
+.tabla-buscador {
+  padding: 8px 12px;
+  border: 1px solid var(--color-borde);
+  border-radius: 999px;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-size: 12.5px;
+  font-family: inherit;
+  width: 180px;
+}
+
+.tabla-buscador:focus {
+  outline: none;
+  border-color: var(--color-violeta);
+}
+
+.tabla-quitar {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--color-texto-tenue);
+}
+
+.tabla-quitar:hover {
+  color: var(--color-rojo);
+  background: var(--color-card-hover);
+}
+
+.tabla-metricas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tabla-metricas span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--color-texto-suave);
+  background: var(--color-fondo);
+  border: 1px solid var(--color-borde);
+}
+
+.tabla-metricas b {
+  color: var(--color-texto);
+}
+
+.tabla-vacia {
+  font-size: 13px;
+  color: var(--color-texto-suave);
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-app {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabla-app th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-texto-tenue);
+  border-bottom: 1px solid var(--color-borde);
+  white-space: nowrap;
+}
+
+.tabla-app td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--color-borde);
+  color: var(--color-texto-suave);
+  vertical-align: middle;
+}
+
+.tabla-app tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla-app tbody tr:hover td {
+  background: var(--color-card-hover);
+}
+
+.tabla-persona {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-texto);
+  font-weight: 500;
+}
+
+.tabla-avatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tabla-estado {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.tabla-estado.positivo {
+  color: var(--color-verde);
+  background: var(--verde-tinte);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tabla-estado.negativo {
+  color: var(--color-rojo);
+  background: var(--rojo-tinte);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.tabla-estado.neutro {
+  color: var(--color-amarillo);
+  background: var(--amarillo-tinte);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+@media (max-width: 640px) {
+  .vista {
+    padding: 0 16px 56px;
+  }
+}

@@ -187,6 +187,54 @@ export function IconoUsuario({ tam = 18 }) {
   )
 }
 
+export function IconoMoneda({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M14.5 9.3a3.2 3.2 0 0 0-5 2.7 3.2 3.2 0 0 0 5 2.7M8 12h4.5" />
+    </svg>
+  )
+}
+
+export function IconoPersonas({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <circle cx="9" cy="8.5" r="3.2" />
+      <path d="M3.5 19.5c1.1-2.8 3.2-4.2 5.5-4.2s4.4 1.4 5.5 4.2" />
+      <path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 15.6c1.6.6 2.7 1.9 3.3 3.9" />
+    </svg>
+  )
+}
+
+export function IconoCaja({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="M3.5 7.5 12 3.5l8.5 4v9l-8.5 4-8.5-4v-9z" />
+      <path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9" />
+    </svg>
+  )
+}
+
+export function IconoLista({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M4 6h.01M4 12h.01M4 18h.01" strokeWidth="2.4" />
+    </svg>
+  )
+}
+
+// Icono de cada categoría del panel (para la navegación por apartados)
+export function IconoCategoria({ categoria, tam = 18 }) {
+  if (categoria === 'finanzas') return <IconoMoneda tam={tam} />
+  if (categoria === 'personas') return <IconoPersonas tam={tam} />
+  if (categoria === 'clientes') return <IconoUsuario tam={tam} />
+  if (categoria === 'inventario') return <IconoCaja tam={tam} />
+  if (categoria === 'agenda') return <IconoCalendario tam={tam} />
+  if (categoria === 'operaciones') return <IconoLista tam={tam} />
+  return <IconoDocumento tam={tam} />
+}
+
 // Icono según el tipo de archivo o conexión de la fuente
 export function IconoTipoArchivo({ tipo, tam = 18 }) {
   if (tipo === 'excel') return <IconoTabla tam={tam} />

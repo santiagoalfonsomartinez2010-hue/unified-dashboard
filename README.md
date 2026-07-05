@@ -32,10 +32,14 @@ preguntas y edita el panel por ti.
    personalizados** calculados de los datos, **conexiones detectadas** entre
    fuentes (el mismo cliente en dos tablas, stock frente a agenda…) y
    **sugerencias accionables**. Se regenera solo al añadir o quitar datos.
-5. **Dashboard unificado:** cabecera con el tipo detectado, KPIs tipo
-   "stat tile" con icono, tarjeta de análisis con conexiones, gráficos por
-   fuente y categoría, agenda unificada y las fuentes al final con su tabla
-   plegada.
+5. **Dashboard tipo app, por apartados:** cada panel se navega desde la
+   barra lateral como una aplicación de verdad — **Resumen** (KPIs con badge,
+   análisis & alertas con tareas marcables, donut por categoría, gráficos y
+   próximos eventos), **Agenda** (todos los eventos por día), **un apartado
+   por cada categoría de datos** (Finanzas, Clientes, Personas, Inventario…)
+   con tablas estilo app (buscador, avatares con iniciales y pastillas de
+   estado) y **Fuentes** (gestión de los datos conectados). Tema negro con
+   acento verde lima configurable por el chatbot.
 6. **Conexión oficial con Google (pendiente):** importar Gmail, Google
    Calendar y Google Sheets está implementado en el código
    (`src/lib/google.js` y `ConexionesGoogle.jsx`) pero todavía no está
@@ -152,17 +156,22 @@ src/
     visuales.js              Colores estables por nombre (avatares)
   components/
     PantallaAcceso.jsx       Crear cuenta / iniciar sesión (obligatorio)
-    Sidebar.jsx              Selector de paneles, acciones, fuentes, cuenta
-    ConexionesGoogle.jsx     Modal de conexión con Gmail/Calendar/Sheets
-    Chatbot.jsx              Asistente flotante (preguntas + edición del panel)
-    Hero.jsx                 Cabecera con degradado + zona de subida
-    Panel.jsx                Dashboard: tipo detectado, KPIs, gráficos, fuentes
-    Kpis.jsx                 Fila de cifras clave
-    GraficoFuentes.jsx       Barras de registros por fuente
-    GraficoCategorias.jsx    Barra apilada de registros por categoría
-    ProximosEventos.jsx      Agenda unificada de todas las fuentes
+    Sidebar.jsx              Navegación por apartados, selector de paneles, cuenta
+    Cabecera.jsx             Barra superior: título del apartado + acciones
+    Panel.jsx                Enrutador de apartados del dashboard
+    VistaResumen.jsx         Apartado Resumen: KPIs, análisis, donut, eventos
+    VistaAgenda.jsx          Apartado Agenda: eventos agrupados por día
+    VistaCategoria.jsx       Apartado por categoría: tablas estilo app
+    VistaFuentes.jsx         Apartado Fuentes: gestión de datos conectados
     AsistenteCreacion.jsx    Formulario por pasos al crear un panel (perfil)
-    AnalisisIA.jsx           Análisis conjunto: titular, conexiones, sugerencias
+    AnalisisIA.jsx           Análisis & alertas: titular, conexiones, tareas
+    Kpis.jsx                 Fila de cifras clave con badge de tendencia
+    GraficoFuentes.jsx       Barras de registros por fuente
+    GraficoDonut.jsx         Donut de registros por categoría
+    GraficoCategorias.jsx    Barra apilada de registros por categoría
+    ProximosEventos.jsx      Lista de próximos eventos (Resumen)
+    ConexionesGoogle.jsx     Modal de conexión con Gmail/Calendar/Sheets (pendiente)
+    Chatbot.jsx              Asistente flotante (preguntas + edición del panel)
     TarjetaFuente.jsx        Tarjeta por fuente con métricas y tabla desplegable
     ModalApiKey.jsx          Modal para introducir la API key de Gemini
     Iconos.jsx               Iconos SVG inline

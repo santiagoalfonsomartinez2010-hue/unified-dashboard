@@ -61,7 +61,7 @@ export default function Chatbot({ panel, apiKey, onAcciones, onPedirApiKey }) {
           onClick={() => setAbierto(true)}
           title="Abrir el asistente del panel"
         >
-          <IconoChispa tam={22} />
+          <IconoChispa tam={17} /> Asistente
         </button>
       )}
 
