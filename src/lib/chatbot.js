@@ -68,9 +68,9 @@ function contextoPanel(panel) {
     {
       fechaDeHoy: new Date().toISOString().slice(0, 10),
       nombrePanel: panel.nombrePanel,
-      tipoPanel: panel.tipoPanel,
+      perfilDelUsuario: panel.perfil,
+      analisisActual: panel.analisis,
       tema: panel.tema,
-      resumenGlobal: panel.resumen,
       fuentes,
     },
     null,

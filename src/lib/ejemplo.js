@@ -133,26 +133,48 @@ export function fuentesDeEjemplo() {
   ]
 }
 
-// Tipo de dashboard que la IA habría detectado para las fuentes de ejemplo
-export function tipoPanelDeEjemplo() {
+// Perfil que el usuario habría rellenado en el asistente de creación
+export function perfilDeEjemplo() {
+  return {
+    proposito: 'negocio',
+    descripcion: 'Negocio de instalaciones y reformas con un equipo pequeño.',
+    ayuda: 'Saber cuánto me deben, no perder citas y controlar el material.',
+    contenidos: ['Gastos y facturas', 'Equipo y personas', 'Calendarios y citas', 'Inventario'],
+    esEjemplo: true,
+  }
+}
+
+// Análisis conjunto que la IA habría generado para las fuentes de ejemplo
+export function analisisDeEjemplo() {
   return {
     tipo: 'Gestión de negocio de instalaciones',
     emoji: '🔧',
     descripcion:
       'Organiza la facturación, el equipo, las citas y el inventario de un negocio de instalaciones y reformas.',
-    confianza: 'alta',
-    esEjemplo: true,
-  }
-}
-
-export function resumenDeEjemplo() {
-  return {
     titular:
-      'Negocio con buena carga de trabajo: 13.460 € facturados este semestre, pero 7.490 € aún sin cobrar y material clave por reponer.',
-    insights: [
-      'Reformas Marín concentra 11.050 € (el 82 % de la facturación) y además tiene la mayor factura pendiente: dependes mucho de un solo cliente.',
-      'El fin del contrato de Lucía Ferrer coincide con el arranque de la obra del almacén: riesgo de quedarte sin administración en plena punta de trabajo.',
-      'Hay 4 citas ya agendadas y 2 obras activas, pero el almacén tiene 2 materiales marcados para reponer que se usan en instalaciones.',
+      'Buena carga de trabajo: 13.460 € facturados este semestre, pero 7.490 € aún sin cobrar y material clave por reponer.',
+    kpis: [
+      { etiqueta: 'Pendiente de cobro', valor: '7.490 €', detalle: '2 de 5 facturas', icono: '💶' },
+      { etiqueta: 'Facturado este semestre', valor: '13.460 €', detalle: '5 facturas emitidas', icono: '📈' },
+      { etiqueta: 'Citas próximas', valor: '4', detalle: '2 obras activas', icono: '📅' },
+      { etiqueta: 'Material por reponer', valor: '2', detalle: 'cable y tubo de cobre', icono: '📦' },
+    ],
+    conexiones: [
+      {
+        titulo: 'Dependencia de un cliente',
+        texto:
+          'Reformas Marín concentra 11.050 € (el 82 % de la facturación) y además tiene la mayor factura pendiente (6.200 €).',
+      },
+      {
+        titulo: 'Contrato vs. obra',
+        texto:
+          'El fin del contrato de Lucía Ferrer coincide con el arranque de la obra del almacén: riesgo de quedarte sin administración en plena punta de trabajo.',
+      },
+      {
+        titulo: 'Stock vs. agenda',
+        texto:
+          'Hay 4 citas agendadas y 2 obras activas, pero el almacén tiene 2 materiales marcados para reponer que se usan en instalaciones.',
+      },
     ],
     sugerencias: [
       'Reclama esta semana la factura F-2026-016 y confirma el cobro de la F-2026-017 antes de empezar la obra del almacén.',

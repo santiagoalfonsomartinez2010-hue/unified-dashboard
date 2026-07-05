@@ -49,9 +49,11 @@ export default function ModalApiKey({ onGuardar, onCerrar, onEjemplo }) {
           </button>
         </form>
 
-        <button className="modal-ejemplo" type="button" onClick={onEjemplo}>
-          <IconoChispa tam={14} /> O mira la demo con datos de ejemplo (sin key)
-        </button>
+        {onEjemplo && (
+          <button className="modal-ejemplo" type="button" onClick={onEjemplo}>
+            <IconoChispa tam={14} /> O mira la demo con datos de ejemplo (sin key)
+          </button>
+        )}
       </div>
     </div>
   )

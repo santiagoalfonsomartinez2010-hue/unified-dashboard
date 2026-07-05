@@ -4,14 +4,10 @@ import Hero from './components/Hero'
 import Panel from './components/Panel'
 import ModalApiKey from './components/ModalApiKey'
 import PantallaAcceso from './components/PantallaAcceso'
+import AsistenteCreacion from './components/AsistenteCreacion'
 import Chatbot from './components/Chatbot'
 import { inferirTipoArchivo } from './lib/parseArchivo'
-import {
-  analizarFuente,
-  generarResumenGlobal,
-  detectarTipoPanel,
-  CATEGORIAS,
-} from './lib/gemini'
+import { analizarFuente, analizarPanelCompleto, CATEGORIAS } from './lib/gemini'
 import {
   supabaseDisponible,
   obtenerSesion,
@@ -26,27 +22,25 @@ import {
 import {
   cargarFuentes,
   guardarFuentes,
-  cargarResumen,
-  guardarResumen,
   cargarExtras,
   guardarExtras,
   cargarApiKey,
   guardarApiKey,
   vaciarTodo,
 } from './lib/almacen'
-import { fuentesDeEjemplo, resumenDeEjemplo, tipoPanelDeEjemplo } from './lib/ejemplo'
+import { fuentesDeEjemplo, perfilDeEjemplo, analisisDeEjemplo } from './lib/ejemplo'
 import './App.css'
 
 /*
   Panel Unificado de Empleia.
 
   Flujo: el usuario crea una cuenta e inicia sesión (los dashboards se guardan
-  en Supabase y se pueden abrir desde cualquier dispositivo), sube archivos
-  (Excel, PDF, imágenes, calendarios…) y la IA de Gemini lo normaliza todo en
-  un solo dashboard. La IA detecta además QUÉ tipo de dashboard se está
-  montando (una peluquería, un gimnasio, el control de pagos…) y un chatbot
-  integrado responde preguntas sobre los datos y edita el panel (estilo
-  visual, nombres, tablas…).
+  en Supabase por usuario). Al crear un panel, un ASISTENTE le hace unas
+  preguntas (para qué es, a qué se dedica, qué quiere ver) y deja añadir todos
+  los archivos de golpe; al pulsar "Crear" se analiza todo a la vez. La IA no
+  se limita a volcar tablas: cruza todas las fuentes con el perfil del usuario
+  y devuelve KPIs personalizados, conexiones entre datos y sugerencias. Un
+  chatbot integrado responde preguntas y edita el panel.
 
   (La conexión con Gmail / Google Calendar / Google Sheets queda para más
   adelante: su código sigue en src/lib/google.js y ConexionesGoogle.jsx, pero
@@ -66,6 +60,23 @@ function tinteDeAcento(hex) {
   return `rgba(${r}, ${g}, ${b}, 0.12)`
 }
 
+// Convierte los datos guardados con el formato antiguo (tipoPanel + resumen)
+// al formato nuevo (analisis) para no perder los paneles ya creados.
+function migrarAnalisis(d) {
+  if (d.analisis) return d.analisis
+  if (!d.tipoPanel && !d.resumen) return null
+  return {
+    tipo: d.tipoPanel?.tipo || 'Panel de organización',
+    emoji: d.tipoPanel?.emoji || '📊',
+    descripcion: d.tipoPanel?.descripcion || '',
+    titular: d.resumen?.titular || '',
+    kpis: [],
+    conexiones: (d.resumen?.insights || []).map((t) => ({ titulo: '', texto: t })),
+    sugerencias: d.resumen?.sugerencias || [],
+    clave: d.tipoPanel?.clave || null,
+  }
+}
+
 export default function App() {
   // Sesión y modo de persistencia
   const [sesion, setSesion] = useState(undefined) // undefined = comprobando
@@ -80,17 +91,18 @@ export default function App() {
 
   // Contenido del panel activo
   const [nombrePanel, setNombrePanel] = useState('Mi panel')
+  const [perfil, setPerfil] = useState(null) // respuestas del asistente de creación
   const [fuentes, setFuentes] = useState([])
-  const [resumen, setResumen] = useState(null)
-  const [tipoPanel, setTipoPanel] = useState(null)
+  const [analisis, setAnalisis] = useState(null) // análisis conjunto de la IA
   const [tema, setTema] = useState(TEMA_POR_DEFECTO)
 
-  // IA y modales
+  // IA, asistente y modales
   const [apiKey, setApiKey] = useState(() => cargarApiKey())
   const [modalKeyAbierto, setModalKeyAbierto] = useState(false)
-  const [generandoResumen, setGenerandoResumen] = useState(false)
-  const [avisoResumen, setAvisoResumen] = useState(null)
-  const [detectandoTipo, setDetectandoTipo] = useState(false)
+  const [asistenteAbierto, setAsistenteAbierto] = useState(false)
+  const [creandoPanel, setCreandoPanel] = useState(false)
+  const [analizando, setAnalizando] = useState(false)
+  const [avisoAnalisis, setAvisoAnalisis] = useState(null)
 
   const inputArchivosRef = useRef(null)
   const panelRef = useRef(null)
@@ -107,7 +119,8 @@ export default function App() {
     return alCambiarSesion(setSesion)
   }, [])
 
-  // Al iniciar sesión, carga la lista de paneles del usuario (o crea el primero)
+  // Al iniciar sesión, carga la lista de paneles del usuario. Si no tiene
+  // ninguno, se abre el asistente de creación (las preguntas del formulario).
   const usuarioId = sesion?.user?.id
   useEffect(() => {
     if (!usuarioId) return
@@ -116,14 +129,14 @@ export default function App() {
     setErrorNube(null)
     ;(async () => {
       try {
-        let lista = await listarPaneles()
-        if (lista.length === 0) {
-          const p = await crearPanel('Mi panel', {})
-          lista = [{ id: p.id, nombre: p.nombre }]
-        }
+        const lista = await listarPaneles()
         if (cancelado) return
         setPaneles(lista)
-        await abrirPanel(lista[0].id)
+        if (lista.length === 0) {
+          setAsistenteAbierto(true)
+        } else {
+          await abrirPanel(lista[0].id)
+        }
       } catch (error) {
         if (!cancelado) setErrorNube(error.message)
       } finally {
@@ -142,26 +155,29 @@ export default function App() {
     omitirGuardado.current = true
     setPanelId(p.id)
     setNombrePanel(p.nombre || 'Mi panel')
+    setPerfil(d.perfil || null)
     setFuentes((d.fuentes || []).filter((f) => f.estado !== 'procesando'))
-    setResumen(d.resumen || null)
-    setTipoPanel(d.tipoPanel || null)
+    setAnalisis(migrarAnalisis(d))
     setTema(d.tema || TEMA_POR_DEFECTO)
-    setAvisoResumen(null)
+    setAvisoAnalisis(null)
     setEstadoGuardado('guardado')
   }
 
   function entrarModoLocal() {
     omitirGuardado.current = true
     setModoLocal(true)
-    setFuentes(cargarFuentes())
-    setResumen(cargarResumen())
+    const fuentesLocales = cargarFuentes()
+    setFuentes(fuentesLocales)
     const extras = cargarExtras()
     if (extras) {
       setNombrePanel(extras.nombrePanel || 'Mi panel')
-      setTipoPanel(extras.tipoPanel || null)
+      setPerfil(extras.perfil || null)
+      setAnalisis(extras.analisis || null)
       setTema(extras.tema || TEMA_POR_DEFECTO)
     }
     setEstadoGuardado('local')
+    // Sin datos previos: arranca con el formulario de creación
+    if (fuentesLocales.length === 0 && !extras) setAsistenteAbierto(true)
   }
 
   async function salir() {
@@ -170,10 +186,11 @@ export default function App() {
     setPaneles([])
     setPanelId(null)
     setNombrePanel('Mi panel')
+    setPerfil(null)
     setFuentes([])
-    setResumen(null)
-    setTipoPanel(null)
+    setAnalisis(null)
     setTema(TEMA_POR_DEFECTO)
+    setAsistenteAbierto(false)
   }
 
   /* ---------- Guardado automático (nube o local) ---------- */
@@ -185,15 +202,14 @@ export default function App() {
     }
     if (modoLocal) {
       guardarFuentes(fuentes)
-      guardarResumen(resumen)
-      guardarExtras({ nombrePanel, tipoPanel, tema })
+      guardarExtras({ nombrePanel, perfil, analisis, tema })
       return
     }
     if (!panelId) return
     setEstadoGuardado('guardando')
     const temporizador = setTimeout(async () => {
       try {
-        await guardarPanel(panelId, nombrePanel, { fuentes, resumen, tipoPanel, tema })
+        await guardarPanel(panelId, nombrePanel, { perfil, fuentes, analisis, tema })
         setEstadoGuardado('guardado')
       } catch {
         setEstadoGuardado('error')
@@ -201,7 +217,7 @@ export default function App() {
     }, 1200)
     return () => clearTimeout(temporizador)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fuentes, resumen, tipoPanel, tema, nombrePanel, panelId, modoLocal])
+  }, [fuentes, analisis, tema, nombrePanel, perfil, panelId, modoLocal])
 
   /* ---------- Tema visual (el chatbot puede cambiarlo) ---------- */
 
@@ -215,39 +231,72 @@ export default function App() {
     }
   }, [tema])
 
-  /* ---------- Detección del tipo de dashboard ---------- */
+  /* ---------- Análisis inteligente conjunto ---------- */
 
   const listas = fuentes.filter((f) => f.estado === 'listo')
+  const hayProcesando = fuentes.some((f) => f.estado === 'procesando')
   const claveFuentes = listas
     .map((f) => f.id)
     .sort()
     .join('|')
 
+  // Ejecuta el análisis conjunto (cruza todas las fuentes con el perfil)
+  async function ejecutarAnalisis(clave) {
+    setAnalizando(true)
+    setAvisoAnalisis(null)
+    try {
+      const resultado = await analizarPanelCompleto(
+        fuentes.filter((f) => f.estado === 'listo'),
+        perfil,
+        apiKey
+      )
+      setAnalisis({ ...resultado, clave })
+    } catch (error) {
+      setAvisoAnalisis(error.message)
+    } finally {
+      setAnalizando(false)
+    }
+  }
+
+  // Se relanza solo cuando cambia el conjunto de fuentes (y no hay ninguna
+  // procesándose: así el lote del asistente se analiza entero de una vez).
   useEffect(() => {
-    if (!claveFuentes || !apiKey) return
-    if (tipoPanel?.esEjemplo || tipoPanel?.clave === claveFuentes) return
+    if (!claveFuentes || !apiKey || hayProcesando) return
+    if (analisis?.esEjemplo || analisis?.clave === claveFuentes) return
     let cancelado = false
-    setDetectandoTipo(true)
     const temporizador = setTimeout(async () => {
+      setAnalizando(true)
+      setAvisoAnalisis(null)
       try {
-        const detectado = await detectarTipoPanel(
+        const resultado = await analizarPanelCompleto(
           fuentes.filter((f) => f.estado === 'listo'),
+          perfil,
           apiKey
         )
-        if (!cancelado) setTipoPanel({ ...detectado, clave: claveFuentes })
-      } catch {
-        // la detección es un extra: si falla, el panel sigue funcionando
+        if (!cancelado) setAnalisis({ ...resultado, clave: claveFuentes })
+      } catch (error) {
+        if (!cancelado) setAvisoAnalisis(error.message)
       } finally {
-        if (!cancelado) setDetectandoTipo(false)
+        if (!cancelado) setAnalizando(false)
       }
-    }, 800)
+    }, 900)
     return () => {
       cancelado = true
       clearTimeout(temporizador)
-      setDetectandoTipo(false)
+      setAnalizando(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claveFuentes, apiKey])
+  }, [claveFuentes, apiKey, hayProcesando])
+
+  // Botón "Actualizar análisis": fuerza una pasada nueva
+  function actualizarAnalisis() {
+    if (listas.length === 0) return
+    if (!apiKey) {
+      setModalKeyAbierto(true)
+      return
+    }
+    ejecutarAnalisis(claveFuentes)
+  }
 
   /* ---------- Archivos subidos ---------- */
 
@@ -259,8 +308,9 @@ export default function App() {
     inputArchivosRef.current?.click()
   }
 
-  // Analiza los archivos en serie (la capa gratuita de Gemini limita el ritmo)
-  async function procesarArchivos(lista) {
+  // Analiza los archivos en serie (la capa gratuita de Gemini limita el ritmo).
+  // Cuando termina el último, el efecto de arriba lanza el análisis conjunto.
+  async function procesarArchivos(lista, perfilContexto = perfil) {
     const archivos = Array.from(lista || [])
     if (archivos.length === 0) return
     if (!apiKey) {
@@ -281,7 +331,7 @@ export default function App() {
     for (let i = 0; i < archivos.length; i++) {
       const meta = nuevas[i]
       try {
-        const resultado = await analizarFuente(archivos[i], meta.tipoArchivo, apiKey)
+        const resultado = await analizarFuente(archivos[i], meta.tipoArchivo, apiKey, perfilContexto)
         setFuentes((previas) =>
           previas.map((f) => (f.id === meta.id ? { ...f, estado: 'listo', resultado } : f))
         )
@@ -293,23 +343,36 @@ export default function App() {
     }
   }
 
-  /* ---------- Resumen global ---------- */
+  /* ---------- Asistente de creación ---------- */
 
-  async function generarResumen() {
-    const procesadas = fuentes.filter((f) => f.estado === 'listo')
-    if (procesadas.length === 0) return
-    if (!apiKey) {
-      setModalKeyAbierto(true)
-      return
-    }
-    setGenerandoResumen(true)
-    setAvisoResumen(null)
+  // Crea el panel con las respuestas del formulario y analiza todos los
+  // archivos añadidos de una sola vez.
+  async function crearDesdeAsistente({ nombre, perfil: perfilNuevo, archivos }) {
+    setCreandoPanel(true)
     try {
-      setResumen(await generarResumenGlobal(procesadas, apiKey))
+      if (!modoLocal) {
+        const p = await crearPanel(nombre, {
+          perfil: perfilNuevo,
+          fuentes: [],
+          analisis: null,
+          tema: TEMA_POR_DEFECTO,
+        })
+        setPaneles((prev) => [{ id: p.id, nombre: p.nombre }, ...prev])
+        omitirGuardado.current = true
+        setPanelId(p.id)
+        setEstadoGuardado('guardado')
+      }
+      setNombrePanel(nombre)
+      setPerfil(perfilNuevo)
+      setFuentes([])
+      setAnalisis(null)
+      setAvisoAnalisis(null)
+      setAsistenteAbierto(false)
+      if (archivos.length > 0) await procesarArchivos(archivos, perfilNuevo)
     } catch (error) {
-      setAvisoResumen(error.message)
+      window.alert(error.message)
     } finally {
-      setGenerandoResumen(false)
+      setCreandoPanel(false)
     }
   }
 
@@ -371,18 +434,6 @@ export default function App() {
 
   /* ---------- Gestión de paneles ---------- */
 
-  async function nuevoPanel() {
-    const nombre = window.prompt('Nombre del nuevo panel:', 'Nuevo panel')
-    if (!nombre?.trim()) return
-    try {
-      const p = await crearPanel(nombre.trim(), {})
-      setPaneles((prev) => [{ id: p.id, nombre: p.nombre }, ...prev])
-      await abrirPanel(p.id)
-    } catch (error) {
-      window.alert(error.message)
-    }
-  }
-
   async function cambiarPanel(id) {
     if (id === panelId) return
     try {
@@ -399,7 +450,16 @@ export default function App() {
       await borrarPanel(panelId)
       const restantes = paneles.filter((p) => p.id !== panelId)
       setPaneles(restantes)
-      if (restantes.length > 0) await abrirPanel(restantes[0].id)
+      if (restantes.length > 0) {
+        await abrirPanel(restantes[0].id)
+      } else {
+        omitirGuardado.current = true
+        setPanelId(null)
+        setFuentes([])
+        setPerfil(null)
+        setAnalisis(null)
+        setAsistenteAbierto(true)
+      }
     } catch (error) {
       window.alert(error.message)
     }
@@ -409,18 +469,18 @@ export default function App() {
 
   function cargarEjemplo() {
     setFuentes(fuentesDeEjemplo())
-    setResumen(resumenDeEjemplo())
-    setTipoPanel(tipoPanelDeEjemplo())
-    setAvisoResumen(null)
+    setPerfil(perfilDeEjemplo())
+    setAnalisis(analisisDeEjemplo())
+    setAvisoAnalisis(null)
+    setAsistenteAbierto(false)
     panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function vaciarPanel() {
-    if (!window.confirm('¿Vaciar el panel? Se quitarán todas las fuentes y el resumen.')) return
+    if (!window.confirm('¿Vaciar el panel? Se quitarán todas las fuentes y el análisis.')) return
     setFuentes([])
-    setResumen(null)
-    setTipoPanel(null)
-    setAvisoResumen(null)
+    setAnalisis(null)
+    setAvisoAnalisis(null)
     if (modoLocal) vaciarTodo()
   }
 
@@ -446,8 +506,25 @@ export default function App() {
     return <PantallaAcceso onModoLocal={entrarModoLocal} />
   }
 
-  // 3) Con sesión pero aún cargando los paneles de la nube
+  // 3) Con sesión pero sin panel activo: o el asistente de creación (primer
+  //    panel) o la pantalla de carga/error
   if (!modoLocal && !panelId) {
+    if (asistenteAbierto && !cargandoPaneles) {
+      return (
+        <>
+          <AsistenteCreacion
+            hayApiKey={Boolean(apiKey)}
+            onPedirApiKey={() => setModalKeyAbierto(true)}
+            onCrear={crearDesdeAsistente}
+            onCerrar={null}
+            creando={creandoPanel}
+          />
+          {modalKeyAbierto && (
+            <ModalApiKey onGuardar={guardarKey} onCerrar={() => setModalKeyAbierto(false)} />
+          )}
+        </>
+      )
+    }
     return (
       <div className="app-cargando">
         {errorNube ? (
@@ -461,13 +538,13 @@ export default function App() {
             </button>
           </div>
         ) : (
-          `${cargandoPaneles ? 'Cargando tus paneles…' : 'Preparando tu panel…'}`
+          'Cargando tus paneles…'
         )}
       </div>
     )
   }
 
-  const panelParaChat = { nombrePanel, tipoPanel, tema, fuentes, resumen }
+  const panelParaChat = { nombrePanel, perfil, analisis, tema, fuentes }
 
   return (
     <div className="app">
@@ -483,7 +560,7 @@ export default function App() {
         onVaciar={vaciarPanel}
         onApiKey={() => setModalKeyAbierto(true)}
         onCambiarPanel={cambiarPanel}
-        onNuevoPanel={nuevoPanel}
+        onNuevoPanel={() => setAsistenteAbierto(true)}
         onBorrarPanel={borrarPanelActual}
         onCerrarSesion={salir}
       />
@@ -498,13 +575,12 @@ export default function App() {
         <div ref={panelRef}>
           <Panel
             fuentes={fuentes}
-            resumen={resumen}
+            analisis={analisis}
+            analizando={analizando}
+            avisoAnalisis={avisoAnalisis}
             nombrePanel={nombrePanel}
-            tipoPanel={tipoPanel}
-            detectandoTipo={detectandoTipo}
-            generandoResumen={generandoResumen}
-            avisoResumen={avisoResumen}
-            onGenerarResumen={generarResumen}
+            perfil={perfil}
+            onActualizarAnalisis={actualizarAnalisis}
             onQuitarFuente={quitarFuente}
             onPedirArchivos={pedirArchivos}
             onEjemplo={cargarEjemplo}
@@ -533,6 +609,16 @@ export default function App() {
             setModalKeyAbierto(false)
             cargarEjemplo()
           }}
+        />
+      )}
+
+      {asistenteAbierto && (
+        <AsistenteCreacion
+          hayApiKey={Boolean(apiKey)}
+          onPedirApiKey={() => setModalKeyAbierto(true)}
+          onCrear={crearDesdeAsistente}
+          onCerrar={() => setAsistenteAbierto(false)}
+          creando={creandoPanel}
         />
       )}
 

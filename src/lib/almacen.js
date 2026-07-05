@@ -35,15 +35,6 @@ export function guardarFuentes(fuentes) {
   escribir(CLAVE_FUENTES, fuentes)
 }
 
-export function cargarResumen() {
-  return leer(CLAVE_RESUMEN, null)
-}
-
-export function guardarResumen(resumen) {
-  if (resumen === null) localStorage.removeItem(CLAVE_RESUMEN)
-  else escribir(CLAVE_RESUMEN, resumen)
-}
-
 // La API key de Gemini se puede fijar por .env (VITE_GEMINI_API_KEY) o desde
 // la interfaz (se guarda en localStorage). La del .env tiene prioridad.
 export function cargarApiKey() {

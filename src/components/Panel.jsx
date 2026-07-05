@@ -3,24 +3,23 @@ import Kpis from './Kpis'
 import GraficoFuentes from './GraficoFuentes'
 import GraficoCategorias from './GraficoCategorias'
 import ProximosEventos from './ProximosEventos'
-import ResumenIA from './ResumenIA'
+import AnalisisIA from './AnalisisIA'
 import TarjetaFuente from './TarjetaFuente'
 import './Panel.css'
 
 /*
-  Dashboard unificado: agrega todas las fuentes procesadas en KPIs, gráficos,
-  próximos eventos, resumen de IA y una tarjeta por fuente. Todos los datos
-  derivados se calculan aquí y se pasan ya masticados a los subcomponentes.
+  Dashboard unificado. El protagonista es el ANÁLISIS de la IA (tipo de panel,
+  KPIs personalizados y conexiones entre fuentes), no el volcado de tablas:
+  las tablas quedan al final, plegadas dentro de cada tarjeta de fuente.
 */
 export default function Panel({
   fuentes,
-  resumen,
+  analisis,
+  analizando,
+  avisoAnalisis,
   nombrePanel,
-  tipoPanel,
-  detectandoTipo,
-  generandoResumen,
-  avisoResumen,
-  onGenerarResumen,
+  perfil,
+  onActualizarAnalisis,
   onQuitarFuente,
   onPedirArchivos,
   onEjemplo,
@@ -53,14 +52,23 @@ export default function Panel({
     .filter((e) => e.fecha && e.fecha >= hoy)
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
+  const etiquetaProposito =
+    perfil?.proposito === 'negocio'
+      ? 'Negocio'
+      : perfil?.proposito === 'trabajo'
+        ? 'Trabajo'
+        : perfil?.proposito === 'personal'
+          ? 'Personal'
+          : null
+
   if (fuentes.length === 0) {
     return (
       <section className="panel">
         <div className="panel-vacio">
           <h2>Tu panel está esperando datos</h2>
           <p>
-            Conecta tus primeras fuentes y aquí aparecerán tus cifras clave, próximos eventos y
-            todas tus tablas, organizadas por la IA.
+            Añade tus primeros archivos y la IA los entenderá en conjunto: cifras clave,
+            conexiones entre tus datos, agenda unificada y sugerencias.
           </p>
           <div className="panel-vacio-botones">
             <button className="boton-primario" type="button" onClick={onPedirArchivos}>
@@ -80,19 +88,20 @@ export default function Panel({
       <div className="panel-cabecera">
         <div>
           <h2>
-            {tipoPanel?.emoji ? `${tipoPanel.emoji} ` : ''}
+            {analisis?.emoji ? `${analisis.emoji} ` : ''}
             {nombrePanel || 'Panel unificado'}
+            {etiquetaProposito && <span className="panel-badge">{etiquetaProposito}</span>}
           </h2>
-          {tipoPanel ? (
+          {analisis?.tipo ? (
             <p className="panel-cabecera-sub">
-              <span className="panel-tipo">{tipoPanel.tipo}</span>
-              {tipoPanel.descripcion ? ` — ${tipoPanel.descripcion}` : ''}
+              <span className="panel-tipo">{analisis.tipo}</span>
+              {analisis.descripcion ? ` — ${analisis.descripcion}` : ''}
             </p>
           ) : (
             <p className="panel-cabecera-sub">
-              {detectandoTipo
-                ? 'La IA está detectando qué tipo de dashboard estás montando…'
-                : `${listas.length} ${listas.length === 1 ? 'fuente conectada' : 'fuentes conectadas'} · actualizado al subir cada archivo`}
+              {analizando
+                ? 'La IA está entendiendo tus datos para personalizar el panel…'
+                : `${listas.length} ${listas.length === 1 ? 'fuente conectada' : 'fuentes conectadas'}`}
             </p>
           )}
         </div>
@@ -102,10 +111,18 @@ export default function Panel({
       </div>
 
       <Kpis
+        kpis={analisis?.kpis}
         numFuentes={listas.length}
         totalRegistros={totalRegistros}
         numEventos={eventos.length}
-        numCategorias={Object.keys(porCategoria).length}
+      />
+
+      <AnalisisIA
+        analisis={analisis}
+        analizando={analizando}
+        aviso={avisoAnalisis}
+        hayFuentes={listas.length > 0}
+        onActualizar={onActualizarAnalisis}
       />
 
       <div className="panel-rejilla">
@@ -122,14 +139,6 @@ export default function Panel({
           <ProximosEventos eventos={eventos} />
         </div>
       </div>
-
-      <ResumenIA
-        resumen={resumen}
-        generando={generandoResumen}
-        aviso={avisoResumen}
-        hayFuentes={listas.length > 0}
-        onGenerar={onGenerarResumen}
-      />
 
       <div className="panel-fuentes-titulo">
         <h3>Tus fuentes</h3>

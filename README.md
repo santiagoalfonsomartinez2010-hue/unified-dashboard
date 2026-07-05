@@ -18,24 +18,28 @@ preguntas y edita el panel por ti.
    dejaste. Se pueden tener varios paneles y cambiar entre ellos desde la
    barra lateral. (Sin Supabase configurado, la app ofrece un "modo local"
    que guarda solo en el navegador.)
-2. **Subida de archivos** (clic o arrastrar): Excel/CSV (se parsean con
+2. **Asistente de creación:** al crear un panel, un formulario por pasos
+   pregunta para qué es el dashboard (personal / trabajo / negocio), en qué
+   consiste tu trabajo y en qué te va a ayudar, y qué quieres añadir. Ese
+   "perfil" personaliza todo el análisis de la IA. Los archivos se añaden
+   todos de golpe y, al pulsar **Crear**, se analizan a la vez.
+3. **Subida de archivos** (clic o arrastrar): Excel/CSV (se parsean con
    `xlsx`), PDF e imágenes (Gemini los lee por visión/OCR), calendarios
    `.ics`, JSON y texto.
-3. **Conexión oficial con Google (pendiente):** importar correos de Gmail,
-   eventos de Google Calendar y hojas de Google Sheets como fuentes del panel
-   está implementado en el código (`src/lib/google.js` y
-   `ConexionesGoogle.jsx`) pero todavía no está enganchado a la interfaz; se
-   activará más adelante.
-4. **La IA entiende tu dashboard:** además de normalizar cada fuente
-   (`{ titulo, categoria, resumen, columnas, registros, eventos, metricas }`),
-   Gemini detecta **qué tipo de dashboard estás montando** — un panel de
-   pagos, la gestión de una peluquería, un gimnasio… — y lo muestra en la
-   cabecera con su descripción.
-5. **Dashboard unificado:** KPIs, registros por fuente, reparto por
-   categoría, próximos eventos de TODAS las fuentes en una agenda única y una
-   tarjeta por fuente con su tabla desplegable.
-6. **Resumen inteligente:** una llamada extra a Gemini cruza todas las
-   fuentes y devuelve titular, observaciones y acciones recomendadas.
+4. **Análisis inteligente conjunto:** la IA no se limita a volcar tablas.
+   Cruza TODAS las fuentes con el perfil del usuario y devuelve: el **tipo de
+   dashboard** (panel de pagos, gestión de peluquería…), **KPIs
+   personalizados** calculados de los datos, **conexiones detectadas** entre
+   fuentes (el mismo cliente en dos tablas, stock frente a agenda…) y
+   **sugerencias accionables**. Se regenera solo al añadir o quitar datos.
+5. **Dashboard unificado:** cabecera con el tipo detectado, KPIs tipo
+   "stat tile" con icono, tarjeta de análisis con conexiones, gráficos por
+   fuente y categoría, agenda unificada y las fuentes al final con su tabla
+   plegada.
+6. **Conexión oficial con Google (pendiente):** importar Gmail, Google
+   Calendar y Google Sheets está implementado en el código
+   (`src/lib/google.js` y `ConexionesGoogle.jsx`) pero todavía no está
+   enganchado a la interfaz; se activará más adelante.
 7. **Chatbot inteligente:** un asistente flotante (funciona con la API key de
    Gemini de cada usuario) que:
    - responde preguntas sobre los datos del panel («¿cuántos proveedores
@@ -137,7 +141,7 @@ src/
   App.jsx                    Estado y lógica principal (sesión, paneles, fuentes, chatbot)
   index.css                  Sistema de diseño (tokens, tema oscuro y claro)
   lib/
-    gemini.js                Gemini: analizar fuentes, detectar tipo de panel, resumen
+    gemini.js                Gemini: analizar fuentes + análisis conjunto del panel
     chatbot.js               Chatbot: contexto del panel + acciones que puede ejecutar
     supabase.js              Cuentas y guardado de paneles en la nube
     google.js                OAuth de Google + lectores de Gmail/Calendar/Sheets
@@ -157,7 +161,8 @@ src/
     GraficoFuentes.jsx       Barras de registros por fuente
     GraficoCategorias.jsx    Barra apilada de registros por categoría
     ProximosEventos.jsx      Agenda unificada de todas las fuentes
-    ResumenIA.jsx            Resumen inteligente global
+    AsistenteCreacion.jsx    Formulario por pasos al crear un panel (perfil)
+    AnalisisIA.jsx           Análisis conjunto: titular, conexiones, sugerencias
     TarjetaFuente.jsx        Tarjeta por fuente con métricas y tabla desplegable
     ModalApiKey.jsx          Modal para introducir la API key de Gemini
     Iconos.jsx               Iconos SVG inline

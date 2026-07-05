@@ -3,13 +3,14 @@ import { parsearExcel, leerTexto, archivoABase64 } from './parseArchivo'
 /*
   Llamadas a la API de Google Gemini.
 
-  Dos funciones:
-   - analizarFuente(file, tipoArchivo, apiKey): analiza UN archivo subido y
+  Funciones principales:
+   - analizarFuente(file, tipoArchivo, apiKey, perfil): analiza UN archivo y
      devuelve su contenido normalizado (título, categoría, tabla, eventos,
-     métricas) para pintarlo en el panel unificado.
-   - generarResumenGlobal(fuentes, apiKey): recibe los resúmenes de todas las
-     fuentes ya procesadas y devuelve un análisis conjunto (titular, insights
-     y sugerencias).
+     métricas), teniendo en cuenta el perfil del usuario.
+   - analizarPanelCompleto(fuentes, perfil, apiKey): cruza TODAS las fuentes
+     con el perfil y devuelve tipo de dashboard, KPIs personalizados,
+     conexiones entre fuentes, titular y sugerencias.
+   - llamarGeminiContents: llamada con historial de turnos (para el chatbot).
 
   ⚠️ SEGURIDAD: al no haber backend, la API key viaja al navegador (va como
   parámetro ?key= en la URL). Úsala solo en esta demo; en producción la
@@ -53,16 +54,6 @@ Reglas:
 - "eventos": citas, vencimientos, entregas o fechas relevantes que aparezcan en el documento (vacío si no hay).
 - "metricas": entre 2 y 4 cifras destacadas calculables del contenido (totales, medias, recuentos), con unidad.
 - Fechas siempre en formato AAAA-MM-DD. No inventes datos que no estén en el documento.`
-
-const INSTRUCCION_RESUMEN = `Eres el analista jefe de Empleia. Recibes los resúmenes de TODAS las fuentes de datos
-que un negocio ha conectado a su panel unificado (tablas, calendarios, documentos…).
-Devuelve SOLO un JSON válido (sin texto adicional, sin markdown) con esta estructura exacta:
-{
-  "titular": "una frase que resuma el estado global del negocio según sus datos",
-  "insights": ["entre 3 y 5 observaciones concretas cruzando las distintas fuentes"],
-  "sugerencias": ["entre 2 y 3 acciones recomendadas y accionables"]
-}
-Escribe en español, con cifras concretas cuando existan. No inventes datos que no estén en los resúmenes.`
 
 // Extrae el primer objeto JSON que aparezca en un texto (por si el modelo añade prosa)
 function extraerJson(texto) {
@@ -121,29 +112,34 @@ export async function llamarGeminiContents(apiKey, instruccion, contents) {
   Analiza un archivo y devuelve el contenido normalizado de la fuente:
   { titulo, categoria, resumen, columnas, registros, eventos, metricas }.
   - tipoArchivo: 'excel' | 'pdf' | 'imagen' | 'calendario' | 'texto'
+  - perfil (opcional): respuestas del asistente de creación, para que la
+    normalización se adapte a lo que el usuario quiere ver.
 */
-export async function analizarFuente(file, tipoArchivo, apiKey) {
+export async function analizarFuente(file, tipoArchivo, apiKey, perfil = null) {
   // Construimos las "parts" del mensaje según el tipo de archivo. En Gemini,
   // cada archivo binario (PDF/imagen) va como inline_data { mime_type, data }.
+  const contexto = perfil ? `Contexto del dueño del panel: ${describirPerfil(perfil)}\n` : ''
   let partes
   if (tipoArchivo === 'excel') {
     const textoTabla = await parsearExcel(file)
-    partes = [{ text: `Contenido del archivo "${file.name}" (en JSON por hojas):\n${textoTabla}` }]
+    partes = [
+      { text: `${contexto}Contenido del archivo "${file.name}" (en JSON por hojas):\n${textoTabla}` },
+    ]
   } else if (tipoArchivo === 'calendario' || tipoArchivo === 'texto') {
     const texto = await leerTexto(file)
-    partes = [{ text: `Contenido del archivo "${file.name}":\n${texto}` }]
+    partes = [{ text: `${contexto}Contenido del archivo "${file.name}":\n${texto}` }]
   } else if (tipoArchivo === 'pdf') {
     const { base64 } = await archivoABase64(file)
     partes = [
       { inline_data: { mime_type: 'application/pdf', data: base64 } },
-      { text: `Analiza este documento "${file.name}".` },
+      { text: `${contexto}Analiza este documento "${file.name}".` },
     ]
   } else {
     // Imagen: el modelo la lee por visión/OCR
     const { base64, mediaType } = await archivoABase64(file)
     partes = [
       { inline_data: { mime_type: mediaType, data: base64 } },
-      { text: `Analiza esta imagen "${file.name}".` },
+      { text: `${contexto}Analiza esta imagen "${file.name}".` },
     ]
   }
 
@@ -177,67 +173,90 @@ export async function analizarFuenteTexto(nombre, texto, apiKey) {
   return resultado
 }
 
-const INSTRUCCION_TIPO = `Eres el analista de Empleia. Recibes los resúmenes de todas las fuentes de datos
-que un usuario ha conectado a su panel. Tu trabajo es deducir QUÉ TIPO DE DASHBOARD está intentando montar:
-qué clase de organización o actividad hay detrás de esos datos (una peluquería, un gimnasio, el control de
-pagos de un negocio, una tienda con inventario, la gestión de un equipo, las finanzas personales…).
+// Describe el perfil del asistente de creación para inyectarlo en los prompts
+function describirPerfil(perfil) {
+  if (!perfil) return 'El usuario no ha rellenado el formulario inicial.'
+  const partes = []
+  if (perfil.proposito)
+    partes.push(
+      `Propósito del dashboard: ${
+        perfil.proposito === 'personal' ? 'uso personal' : perfil.proposito === 'trabajo' ? 'su trabajo' : 'su negocio'
+      }.`
+    )
+  if (perfil.descripcion) partes.push(`Descripción del usuario: "${perfil.descripcion}".`)
+  if (perfil.ayuda) partes.push(`En qué quiere que le ayude el dashboard: "${perfil.ayuda}".`)
+  if (perfil.contenidos?.length)
+    partes.push(`Qué quiere ver en el panel: ${perfil.contenidos.join(', ')}.`)
+  return partes.join(' ')
+}
+
+const INSTRUCCION_ANALISIS = `Eres el analista jefe de Empleia. Recibes (1) el PERFIL que el usuario rellenó al crear
+su dashboard (para qué lo quiere, a qué se dedica, qué quiere ver) y (2) TODAS las fuentes de datos ya normalizadas
+(tablas, métricas y eventos). Tu trabajo NO es repetir las tablas: es ENTENDER el conjunto y CRUZAR la información
+entre fuentes, personalizándolo todo al perfil del usuario.
+
 Devuelve SOLO un JSON válido (sin texto adicional, sin markdown) con esta estructura exacta:
 {
-  "tipo": "nombre corto del tipo de panel, máx. 5 palabras (ej: 'Panel de pagos', 'Gestión de peluquería', 'Control de gimnasio')",
+  "tipo": "nombre corto del tipo de dashboard, máx. 5 palabras (ej: 'Panel de pagos', 'Gestión de peluquería')",
   "emoji": "un único emoji que represente ese tipo",
-  "descripcion": "1 frase explicando qué se organiza en este panel y para qué sirve",
-  "confianza": "alta" | "media" | "baja"
+  "descripcion": "1 frase explicando qué organiza este panel y para qué le sirve al usuario",
+  "titular": "una frase con el estado global según los datos, con cifras concretas",
+  "kpis": [ { "etiqueta": "nombre de la cifra", "valor": "valor con su unidad", "detalle": "matiz corto (ej: 'de 5 facturas', '+2 esta semana')" } ],
+  "conexiones": [ { "titulo": "máx. 5 palabras", "texto": "conexión concreta detectada CRUZANDO al menos dos fuentes o datos, con cifras" } ],
+  "sugerencias": [ "entre 2 y 4 acciones recomendadas, concretas y accionables, adaptadas al perfil" ]
 }
-Si las fuentes son demasiado variadas o escasas para saberlo, usa confianza "baja" y un tipo genérico
-como "Panel de organización general". Escribe en español.`
+
+Reglas:
+- "kpis": entre 3 y 4 cifras que de verdad importen a ESTE usuario según su perfil (no recuentos triviales de filas).
+  Calcula totales, pendientes, medias o próximos vencimientos a partir de los registros.
+- "conexiones": entre 2 y 4. Busca relaciones reales: el mismo cliente en dos fuentes, gastos frente a ingresos,
+  citas que chocan con disponibilidad del equipo, inventario que afecta a trabajos agendados… Si solo hay una
+  fuente, cruza columnas dentro de ella (p. ej. estado de pago por cliente).
+- No inventes datos que no estén en las fuentes. Escribe en español, cercano y claro.`
 
 /*
-  Detecta el tipo de dashboard que el usuario está montando (peluquería,
-  gimnasio, pagos…) a partir de todas las fuentes procesadas.
-  Devuelve { tipo, emoji, descripcion, confianza }.
+  Análisis inteligente conjunto del panel: cruza TODAS las fuentes con el
+  perfil del usuario y devuelve tipo de dashboard, KPIs personalizados,
+  conexiones entre fuentes, titular y sugerencias.
 */
-export async function detectarTipoPanel(fuentes, apiKey) {
-  const descripcion = fuentes
+export async function analizarPanelCompleto(fuentes, perfil, apiKey) {
+  const cuerpo = fuentes
     .map((f, i) => {
       const r = f.resultado
-      return `Fuente ${i + 1} — "${r.titulo}" (categoría: ${r.categoria}). ${r.resumen}
-Columnas: ${(r.columnas || []).join(', ') || 'ninguna'}. Métricas: ${(r.metricas || [])
-        .map((m) => `${m.etiqueta}: ${m.valor}`)
-        .join('; ') || 'ninguna'}`
+      const registros = (r.registros || []).slice(0, 25)
+      return `Fuente ${i + 1} — "${r.titulo}" (categoría: ${r.categoria}, ${(r.registros || []).length} registros en total)
+Resumen: ${r.resumen}
+Columnas: ${(r.columnas || []).join(', ') || 'ninguna'}
+Registros (muestra): ${JSON.stringify(registros)}
+Métricas: ${(r.metricas || []).map((m) => `${m.etiqueta}: ${m.valor}`).join('; ') || 'ninguna'}
+Eventos: ${(r.eventos || [])
+        .slice(0, 15)
+        .map((e) => `${e.fecha} ${e.titulo}`)
+        .join(' | ') || 'ninguno'}`
     })
     .join('\n\n')
 
-  const resultado = await llamarGemini(apiKey, INSTRUCCION_TIPO, [
-    { text: `Fuentes conectadas al panel:\n\n${descripcion}` },
+  const resultado = await llamarGemini(apiKey, INSTRUCCION_ANALISIS, [
+    {
+      text: `PERFIL DEL USUARIO: ${describirPerfil(perfil)}
+Fecha de hoy: ${new Date().toISOString().slice(0, 10)}
+
+FUENTES DEL PANEL:
+
+${cuerpo}`,
+    },
   ])
-  if (!resultado.tipo) throw new Error('No se pudo detectar el tipo de panel')
+
+  if (!resultado.tipo) resultado.tipo = 'Panel de organización'
   if (!resultado.emoji) resultado.emoji = '📊'
   if (!resultado.descripcion) resultado.descripcion = ''
-  if (!['alta', 'media', 'baja'].includes(resultado.confianza)) resultado.confianza = 'media'
-  return resultado
-}
-
-/*
-  Genera el resumen global del panel a partir de las fuentes ya procesadas.
-  Devuelve { titular, insights: [], sugerencias: [] }.
-*/
-export async function generarResumenGlobal(fuentes, apiKey) {
-  const descripcion = fuentes
-    .map((f, i) => {
-      const r = f.resultado
-      const metricas = (r.metricas || []).map((m) => `${m.etiqueta}: ${m.valor}`).join('; ')
-      return `Fuente ${i + 1} — "${r.titulo}" (categoría: ${r.categoria}, ${r.registros.length} registros, ${r.eventos.length} eventos futuros).
-Resumen: ${r.resumen}
-Métricas: ${metricas || 'ninguna'}`
-    })
-    .join('\n\n')
-
-  const resultado = await llamarGemini(apiKey, INSTRUCCION_RESUMEN, [
-    { text: `Resúmenes de las fuentes conectadas al panel:\n\n${descripcion}` },
-  ])
-
-  if (!resultado.titular) throw new Error('El resumen devuelto no tiene la estructura esperada')
-  if (!Array.isArray(resultado.insights)) resultado.insights = []
+  if (!resultado.titular) resultado.titular = ''
+  if (!Array.isArray(resultado.kpis)) resultado.kpis = []
+  if (!Array.isArray(resultado.conexiones)) resultado.conexiones = []
   if (!Array.isArray(resultado.sugerencias)) resultado.sugerencias = []
+  resultado.kpis = resultado.kpis
+    .filter((k) => k && k.etiqueta && k.valor !== undefined)
+    .slice(0, 4)
+  resultado.conexiones = resultado.conexiones.filter((c) => c && c.texto).slice(0, 4)
   return resultado
 }
