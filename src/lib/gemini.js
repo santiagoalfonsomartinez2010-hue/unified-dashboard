@@ -17,11 +17,70 @@ import { parsearExcel, leerTexto, archivoABase64 } from './parseArchivo'
   llamada debería ir en un backend.
 */
 
-// Google retira modelos antiguos para las cuentas nuevas (los 1.5 y también
-// gemini-2.5-flash-lite ya no están disponibles). Usamos un modelo actual
-// disponible en la capa gratuita. Se puede sobrescribir con VITE_GEMINI_MODEL.
-const MODELO = (import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash').trim()
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`
+const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
+
+// Google va retirando modelos para las cuentas nuevas (1.5, 2.5-flash-lite,
+// incluso 2.5-flash…). Para no depender de un nombre que puede caducar, la app
+// PREGUNTA a la propia API key qué modelos tiene disponibles y elige uno sola.
+// Se puede forzar uno concreto con VITE_GEMINI_MODEL.
+const MODELO_FIJO = (import.meta.env.VITE_GEMINI_MODEL || '').trim()
+
+// Modelo elegido, cacheado en memoria durante la sesión.
+let modeloCache = MODELO_FIJO || null
+
+// Orden de preferencia (por subcadena): primero los "flash" (rápidos y en la
+// capa gratuita), con los alias "-latest" —que Google mantiene apuntando al
+// modelo vigente— por delante.
+const PREFERENCIAS_MODELO = [
+  'gemini-flash-latest',
+  'flash-latest',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'flash',
+  'gemini-pro-latest',
+  'pro-latest',
+  'gemini-2.5-pro',
+  'pro',
+]
+
+// Lista los modelos de la cuenta que soportan generateContent (ids sin "models/")
+async function listarModelosDisponibles(apiKey) {
+  const respuesta = await fetch(`${BASE_URL}/models?key=${apiKey}&pageSize=200`)
+  if (!respuesta.ok) {
+    const detalle = await respuesta.text()
+    throw new Error(`No se pudo consultar los modelos de Gemini (${respuesta.status}): ${detalle}`)
+  }
+  const datos = await respuesta.json()
+  return (datos.models || [])
+    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map((m) => (m.name || '').replace(/^models\//, ''))
+    .filter(Boolean)
+}
+
+// Elige el mejor modelo disponible según las preferencias
+function elegirModelo(ids) {
+  // Descarta modelos no aptos para chat/análisis de texto
+  const utiles = ids.filter((id) => !/embedding|aqa|imagen|image|vision|tts|gemma/i.test(id))
+  const pool = utiles.length ? utiles : ids
+  for (const pref of PREFERENCIAS_MODELO) {
+    const encontrado = pool.find((id) => id.includes(pref))
+    if (encontrado) return encontrado
+  }
+  return pool[0]
+}
+
+// Devuelve el modelo a usar (fijo por env, o autodescubierto y cacheado)
+async function resolverModelo(apiKey) {
+  if (modeloCache) return modeloCache
+  const ids = await listarModelosDisponibles(apiKey)
+  if (ids.length === 0) {
+    throw new Error(
+      'Tu API key de Gemini no tiene ningún modelo disponible. Crea una nueva en aistudio.google.com/apikey.'
+    )
+  }
+  modeloCache = elegirModelo(ids)
+  return modeloCache
+}
 
 // Categorías fijas en las que el modelo clasifica cada fuente. El panel las
 // usa para colorear el gráfico de categorías, así que deben ser un conjunto
@@ -93,12 +152,24 @@ export async function llamarGeminiContents(apiKey, instruccion, contents) {
     },
   }
 
-  // La autenticación va como ?key= en la URL (no en cabeceras).
-  const respuesta = await fetch(`${API_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(cuerpo),
-  })
+  // Lanza la petición generateContent con el modelo indicado (auth por ?key=)
+  const pedir = (modelo) =>
+    fetch(`${BASE_URL}/models/${modelo}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(cuerpo),
+    })
+
+  let modelo = await resolverModelo(apiKey)
+  let respuesta = await pedir(modelo)
+
+  // Si el modelo elegido/cacheado ha dejado de estar disponible (404) y no está
+  // forzado por env, se redescubre uno nuevo una vez y se reintenta.
+  if (respuesta.status === 404 && !MODELO_FIJO) {
+    modeloCache = null
+    modelo = await resolverModelo(apiKey)
+    respuesta = await pedir(modelo)
+  }
 
   if (!respuesta.ok) {
     const detalle = await respuesta.text()
