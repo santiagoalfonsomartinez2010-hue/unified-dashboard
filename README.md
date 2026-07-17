@@ -118,7 +118,7 @@ barra lateral (se guarda en su navegador), o puedes fijarla para todos con
 - **Supabase** (`@supabase/supabase-js`): autenticación email+contraseña y
   tabla `paneles` (JSONB) con RLS
 - **xlsx** para parsear Excel/CSV en el navegador
-- **API de Google Gemini** (`gemini-2.5-flash-lite` por defecto, configurable
+- **API de Google Gemini** (`gemini-1.5-flash` por defecto, configurable
   con `VITE_GEMINI_MODEL`): análisis de fuentes, detección del tipo de panel,
   resumen global y chatbot
 - Interfaz íntegramente en **español**, tema oscuro/claro con acento

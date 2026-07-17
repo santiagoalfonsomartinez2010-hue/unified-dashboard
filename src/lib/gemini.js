@@ -19,7 +19,7 @@ import { parsearExcel, leerTexto, archivoABase64 } from './parseArchivo'
 
 // Los modelos 1.5 fueron retirados de la API pública; usamos un modelo 2.x
 // actual por defecto. Se puede sobrescribir con VITE_GEMINI_MODEL.
-const MODELO = (import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash-lite').trim()
+const MODELO = (import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash').trim()
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`
 
 // Categorías fijas en las que el modelo clasifica cada fuente. El panel las
@@ -84,7 +84,12 @@ export async function llamarGeminiContents(apiKey, instruccion, contents) {
   const cuerpo = {
     system_instruction: { parts: [{ text: instruccion }] },
     contents,
-    generationConfig: { maxOutputTokens: 8192 },
+    generationConfig: {
+      maxOutputTokens: 16384,
+      // Modo JSON nativo de Gemini: obliga al modelo a devolver JSON puro,
+      // sin prosa ni vallas de markdown alrededor.
+      responseMimeType: 'application/json',
+    },
   }
 
   // La autenticación va como ?key= en la URL (no en cabeceras).
@@ -100,12 +105,25 @@ export async function llamarGeminiContents(apiKey, instruccion, contents) {
   }
 
   const datos = await respuesta.json()
+  const candidato = datos?.candidates?.[0]
   // El texto de la respuesta está en candidates[0].content.parts[0].text
-  const texto = datos?.candidates?.[0]?.content?.parts?.[0]?.text
+  const texto = candidato?.content?.parts?.map((p) => p.text || '').join('') || ''
   if (!texto) {
     throw new Error('La respuesta del modelo no contiene texto')
   }
-  return extraerJson(texto)
+  try {
+    return extraerJson(texto)
+  } catch {
+    // La respuesta se cortó (demasiado larga) o no es JSON. Se adjunta el
+    // texto crudo para que quien llama pueda usarlo como respuesta de rescate.
+    const err = new Error(
+      candidato?.finishReason === 'MAX_TOKENS'
+        ? 'La respuesta era demasiado larga y se cortó. Pide el cambio en partes más pequeñas.'
+        : 'La respuesta del modelo no contiene un JSON válido'
+    )
+    err.textoCrudo = texto
+    throw err
+  }
 }
 
 /*

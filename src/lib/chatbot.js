@@ -110,14 +110,34 @@ export async function enviarMensajeChat(historial, mensaje, panel, apiKey) {
   })
 
   for (const m of historial.slice(-12)) {
+    // Los turnos del bot se reenvían con el MISMO formato JSON que debe
+    // devolver: si fueran texto plano, el modelo imitaría ese formato y
+    // dejaría de responder en JSON.
     contents.push({
       role: m.de === 'usuario' ? 'user' : 'model',
-      parts: [{ text: m.texto }],
+      parts: [
+        {
+          text:
+            m.de === 'usuario'
+              ? m.texto
+              : JSON.stringify({ respuesta: m.texto, acciones: [] }),
+        },
+      ],
     })
   }
   contents.push({ role: 'user', parts: [{ text: mensaje }] })
 
-  const resultado = await llamarGeminiContents(apiKey, INSTRUCCION_CHAT, contents)
+  let resultado
+  try {
+    resultado = await llamarGeminiContents(apiKey, INSTRUCCION_CHAT, contents)
+  } catch (error) {
+    // Red de seguridad: si el modelo respondió texto normal en vez de JSON,
+    // se usa ese texto como respuesta en lugar de enseñar un error.
+    if (error.textoCrudo?.trim()) {
+      return { respuesta: error.textoCrudo.trim(), acciones: [] }
+    }
+    throw error
+  }
 
   const respuesta =
     typeof resultado.respuesta === 'string' && resultado.respuesta.trim()
