@@ -1,4 +1,5 @@
-import { IconoMas, IconoChispa, IconoSincronizar } from './Iconos'
+import { useState } from 'react'
+import { IconoMas, IconoChispa, IconoSincronizar, IconoLapiz, IconoCheck, IconoPaleta } from './Iconos'
 import Cabecera from './Cabecera'
 import VistaResumen from './VistaResumen'
 import VistaAgenda from './VistaAgenda'
@@ -20,13 +21,20 @@ export default function Panel({
   avisoAnalisis,
   nombrePanel,
   perfil,
+  tema,
   onActualizarAnalisis,
+  onEditarAnalisis,
+  onEditarFuente,
   onQuitarFuente,
   onPedirArchivos,
   onArchivosSoltados,
+  onPersonalizar,
+  onNuevaTabla,
   onEjemplo,
 }) {
+  const [editando, setEditando] = useState(false)
   const listas = fuentes.filter((f) => f.estado === 'listo')
+  const emoji = tema?.emoji || analisis?.emoji
 
   const etiquetaProposito =
     perfil?.proposito === 'negocio'
@@ -42,10 +50,14 @@ export default function Panel({
     return (
       <>
         <Cabecera
-          titulo={`${analisis?.emoji ? `${analisis.emoji} ` : ''}${nombrePanel || 'Mi panel'}`}
+          titulo={`${emoji ? `${emoji} ` : ''}${nombrePanel || 'Mi panel'}`}
           badge={etiquetaProposito}
           subtitulo="Tu panel está esperando datos."
-        />
+        >
+          <button className="boton-secundario" type="button" onClick={onNuevaTabla}>
+            <IconoMas tam={14} /> Nueva tabla manual
+          </button>
+        </Cabecera>
         <div className="vista">
           <div
             className="panel-vacio"
@@ -80,7 +92,7 @@ export default function Panel({
   let subtitulo = ''
   let badge = null
   if (vista === 'resumen') {
-    titulo = `${analisis?.emoji ? `${analisis.emoji} ` : ''}${nombrePanel || 'Mi panel'}`
+    titulo = `${emoji ? `${emoji} ` : ''}${nombrePanel || 'Mi panel'}`
     badge = etiquetaProposito
     subtitulo = analisis?.tipo
       ? `${analisis.tipo}${analisis.descripcion ? ` — ${analisis.descripcion}` : ''}`
@@ -106,13 +118,38 @@ export default function Panel({
     <>
       <Cabecera titulo={titulo} subtitulo={subtitulo} badge={badge}>
         {vista === 'resumen' && (
-          <button
-            className="boton-secundario"
-            type="button"
-            onClick={onActualizarAnalisis}
-            disabled={analizando || listas.length === 0}
-          >
-            <IconoSincronizar tam={14} /> {analizando ? 'Analizando…' : 'Actualizar análisis'}
+          <>
+            <button
+              className="boton-secundario"
+              type="button"
+              onClick={onPersonalizar}
+              title="Personalizar apariencia"
+            >
+              <IconoPaleta tam={14} /> Personalizar
+            </button>
+            <button
+              className={`boton-secundario ${editando ? 'tabla-editar activo' : ''}`}
+              type="button"
+              onClick={() => setEditando(!editando)}
+            >
+              {editando ? <IconoCheck tam={14} /> : <IconoLapiz tam={14} />}
+              {editando ? 'Hecho' : 'Editar'}
+            </button>
+            {!editando && (
+              <button
+                className="boton-secundario"
+                type="button"
+                onClick={onActualizarAnalisis}
+                disabled={analizando || listas.length === 0}
+              >
+                <IconoSincronizar tam={14} /> {analizando ? 'Analizando…' : 'Actualizar análisis'}
+              </button>
+            )}
+          </>
+        )}
+        {vista.startsWith('cat:') && (
+          <button className="boton-secundario" type="button" onClick={onNuevaTabla}>
+            <IconoMas tam={14} /> Nueva tabla
           </button>
         )}
         <button className="boton-primario" type="button" onClick={onPedirArchivos}>
@@ -126,10 +163,18 @@ export default function Panel({
           analisis={analisis}
           analizando={analizando}
           avisoAnalisis={avisoAnalisis}
+          editando={editando}
+          onEditarAnalisis={onEditarAnalisis}
           onActualizarAnalisis={onActualizarAnalisis}
         />
       )}
-      {vista === 'agenda' && <VistaAgenda listas={listas} />}
+      {vista === 'agenda' && (
+        <VistaAgenda
+          listas={listas}
+          onEditarFuente={onEditarFuente}
+          onQuitarFuente={onQuitarFuente}
+        />
+      )}
       {vista === 'fuentes' && (
         <VistaFuentes fuentes={fuentes} onQuitarFuente={onQuitarFuente} />
       )}
@@ -137,7 +182,9 @@ export default function Panel({
         <VistaCategoria
           categoria={vista.slice(4)}
           fuentes={fuentes}
+          onEditarFuente={onEditarFuente}
           onQuitarFuente={onQuitarFuente}
+          onNuevaTabla={onNuevaTabla}
         />
       )}
     </>

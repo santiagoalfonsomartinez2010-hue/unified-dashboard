@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Panel from './components/Panel'
 import ModalApiKey from './components/ModalApiKey'
+import ModalPersonalizar from './components/ModalPersonalizar'
+import ModalNuevaTabla from './components/ModalNuevaTabla'
 import PantallaAcceso from './components/PantallaAcceso'
 import AsistenteCreacion from './components/AsistenteCreacion'
 import Chatbot from './components/Chatbot'
@@ -113,6 +115,8 @@ export default function App() {
   const [apiKey, setApiKey] = useState(() => cargarApiKey())
   const [modalKeyAbierto, setModalKeyAbierto] = useState(false)
   const [asistenteAbierto, setAsistenteAbierto] = useState(false)
+  const [personalizarAbierto, setPersonalizarAbierto] = useState(false)
+  const [nuevaTablaAbierta, setNuevaTablaAbierta] = useState(false)
   const [creandoPanel, setCreandoPanel] = useState(false)
   const [analizando, setAnalizando] = useState(false)
   const [avisoAnalisis, setAvisoAnalisis] = useState(null)
@@ -409,7 +413,7 @@ export default function App() {
     }
   }
 
-  /* ---------- Acciones del chatbot ---------- */
+  /* ---------- Edición manual del panel ---------- */
 
   function editarResultado(id, editar) {
     setFuentes((previas) =>
@@ -418,6 +422,62 @@ export default function App() {
       )
     )
   }
+
+  // Aplica cambios sueltos al resultado de una fuente (título, categoría,
+  // columnas, registros, métricas, eventos…). Lo usan las vistas editables.
+  function editarFuente(id, cambios) {
+    editarResultado(id, (r) => ({ ...r, ...cambios }))
+  }
+
+  // Aplica cambios al análisis (kpis, titular, conexiones, sugerencias…)
+  // desde el modo edición del Resumen. Si aún no hay análisis, lo crea.
+  function editarAnalisis(cambios) {
+    setAnalisis((a) => ({
+      tipo: null,
+      emoji: null,
+      descripcion: '',
+      titular: '',
+      kpis: [],
+      conexiones: [],
+      sugerencias: [],
+      clave: claveFuentes,
+      ...(a || {}),
+      ...cambios,
+    }))
+  }
+
+  function renombrarPanel(nombre) {
+    const limpio = String(nombre || '').trim().slice(0, 60)
+    if (!limpio) return
+    setNombrePanel(limpio)
+    setPaneles((prev) => prev.map((p) => (p.id === panelId ? { ...p, nombre: limpio } : p)))
+  }
+
+  // Crea una tabla manual vacía (proveedores, clientes, citas…) sin archivo
+  function crearFuenteManual({ titulo, categoria, columnas }) {
+    const nueva = {
+      id: nuevoId(),
+      nombreArchivo: 'Creada a mano',
+      tipoArchivo: 'texto',
+      origen: 'manual',
+      estado: 'listo',
+      creado: Date.now(),
+      resultado: {
+        titulo: titulo || 'Nueva tabla',
+        categoria: CATEGORIAS.includes(categoria) ? categoria : 'otros',
+        resumen: 'Tabla creada manualmente.',
+        columnas: columnas?.length ? columnas : ['Nombre', 'Detalle', 'Estado', 'Fecha'],
+        registros: [],
+        eventos: [],
+        metricas: [],
+      },
+    }
+    setFuentes((previas) => [...previas, nueva])
+    setNuevaTablaAbierta(false)
+    setVista(nueva.resultado.categoria === 'agenda' ? 'agenda' : `cat:${nueva.resultado.categoria}`)
+  }
+
+  /* ---------- Acciones del chatbot ---------- */
 
   function aplicarAcciones(acciones) {
     for (const a of acciones) {
@@ -429,11 +489,7 @@ export default function App() {
           if (/^#[0-9a-f]{6}$/i.test(a.color || '')) setTema((t) => ({ ...t, acento: a.color }))
           break
         case 'renombrar_panel':
-          if (a.nombre) {
-            const nombre = String(a.nombre).slice(0, 60)
-            setNombrePanel(nombre)
-            setPaneles((prev) => prev.map((p) => (p.id === panelId ? { ...p, nombre } : p)))
-          }
+          renombrarPanel(a.nombre)
           break
         case 'renombrar_fuente':
           if (a.titulo) editarResultado(a.id, (r) => ({ ...r, titulo: String(a.titulo) }))
@@ -593,6 +649,8 @@ export default function App() {
         usuarioEmail={sesion?.user?.email || null}
         onVista={setVista}
         onAnadir={pedirArchivos}
+        onNuevaTabla={() => setNuevaTablaAbierta('otros')}
+        onPersonalizar={() => setPersonalizarAbierto(true)}
         onEjemplo={cargarEjemplo}
         onVaciar={vaciarPanel}
         onApiKey={() => setModalKeyAbierto(true)}
@@ -611,10 +669,17 @@ export default function App() {
           avisoAnalisis={avisoAnalisis}
           nombrePanel={nombrePanel}
           perfil={perfil}
+          tema={tema}
           onActualizarAnalisis={actualizarAnalisis}
+          onEditarAnalisis={editarAnalisis}
+          onEditarFuente={editarFuente}
           onQuitarFuente={quitarFuente}
           onPedirArchivos={pedirArchivos}
           onArchivosSoltados={procesarArchivos}
+          onPersonalizar={() => setPersonalizarAbierto(true)}
+          onNuevaTabla={() =>
+            setNuevaTablaAbierta(vista.startsWith('cat:') ? vista.slice(4) : 'otros')
+          }
           onEjemplo={cargarEjemplo}
         />
       </main>
@@ -650,6 +715,24 @@ export default function App() {
           onCrear={crearDesdeAsistente}
           onCerrar={() => setAsistenteAbierto(false)}
           creando={creandoPanel}
+        />
+      )}
+
+      {personalizarAbierto && (
+        <ModalPersonalizar
+          nombre={nombrePanel}
+          tema={tema}
+          onNombre={renombrarPanel}
+          onTema={setTema}
+          onCerrar={() => setPersonalizarAbierto(false)}
+        />
+      )}
+
+      {nuevaTablaAbierta && (
+        <ModalNuevaTabla
+          categoriaInicial={typeof nuevaTablaAbierta === 'string' ? nuevaTablaAbierta : 'otros'}
+          onCrear={crearFuenteManual}
+          onCerrar={() => setNuevaTablaAbierta(false)}
         />
       )}
 

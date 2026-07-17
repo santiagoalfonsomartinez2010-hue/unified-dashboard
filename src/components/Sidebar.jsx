@@ -7,6 +7,7 @@ import {
   IconoCalendario,
   IconoTabla,
   IconoCategoria,
+  IconoPaleta,
   IconoSalir,
   IconoUsuario,
 } from './Iconos'
@@ -29,6 +30,8 @@ export default function Sidebar({
   usuarioEmail,
   onVista,
   onAnadir,
+  onNuevaTabla,
+  onPersonalizar,
   onEjemplo,
   onVaciar,
   onApiKey,
@@ -44,9 +47,10 @@ export default function Sidebar({
     local: 'Modo local (solo este navegador)',
   }[estadoGuardado]
 
-  const numEventos = fuentes
-    .filter((f) => f.estado === 'listo')
-    .reduce((s, f) => s + (f.resultado.eventos?.length || 0), 0)
+  const procesadas = fuentes.filter((f) => f.estado === 'listo')
+  const hayAgenda =
+    procesadas.some((f) => (f.resultado.eventos?.length || 0) > 0) ||
+    procesadas.some((f) => f.resultado.categoria === 'agenda')
 
   return (
     <aside className="sidebar">
@@ -95,7 +99,7 @@ export default function Sidebar({
         >
           <IconoPanel /> Resumen
         </button>
-        {numEventos > 0 && (
+        {hayAgenda && (
           <button
             className={`sidebar-item ${vista === 'agenda' ? 'activo' : ''}`}
             type="button"
@@ -130,6 +134,12 @@ export default function Sidebar({
       <nav className="sidebar-nav">
         <button className="sidebar-item" type="button" onClick={onAnadir}>
           <IconoMas /> Añadir datos
+        </button>
+        <button className="sidebar-item" type="button" onClick={onNuevaTabla}>
+          <IconoTabla /> Nueva tabla manual
+        </button>
+        <button className="sidebar-item" type="button" onClick={onPersonalizar}>
+          <IconoPaleta /> Personalizar
         </button>
         <button className="sidebar-item" type="button" onClick={onEjemplo}>
           <IconoChispa /> Datos de ejemplo

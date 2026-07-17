@@ -303,3 +303,147 @@
     padding: 0 16px 56px;
   }
 }
+
+/* --- Edición manual de la agenda --- */
+
+.agenda-anadir {
+  margin-bottom: 18px;
+}
+
+.agenda-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.agenda-form .edicion-mini {
+  width: auto;
+}
+
+.agenda-form-titulo {
+  flex: 1;
+  min-width: 180px;
+}
+
+.agenda-evento {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.agenda-evento-textos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.agenda-evento-botones {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.agenda-evento:hover .agenda-evento-botones,
+.agenda-evento:focus-within .agenda-evento-botones {
+  opacity: 1;
+}
+
+.agenda-evento-editando {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agenda-evento-editando .edicion-mini {
+  width: auto;
+}
+
+.agenda-guardar {
+  padding: 8px 12px;
+}
+
+/* --- Edición de las tablas por categoría --- */
+
+.tabla-editar.activo {
+  border-color: var(--color-violeta);
+  color: var(--color-violeta);
+}
+
+.tabla-edita-titulo {
+  font-size: 14px !important;
+  font-weight: 700;
+  width: 100%;
+  max-width: 320px;
+}
+
+.tabla-edita-categoria {
+  width: auto !important;
+}
+
+.tabla-edita-metricas {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+  align-items: flex-start;
+}
+
+.tabla-edita-metrica {
+  display: flex;
+  gap: 7px;
+  width: 100%;
+  max-width: 520px;
+  align-items: center;
+}
+
+.tabla-edita-col {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 110px;
+}
+
+.tabla-edita-col .edicion-mini {
+  font-size: 11px;
+  text-transform: none;
+  padding: 5px 8px;
+}
+
+.tabla-th-acciones,
+.tabla-td-acciones {
+  width: 64px;
+  white-space: nowrap;
+}
+
+.tabla-anadir-col {
+  padding: 5px 10px;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.tabla-td-edita {
+  padding: 6px 8px !important;
+  min-width: 110px;
+}
+
+.tabla-anadir-fila {
+  margin-top: 12px;
+}
+
+.tabla-vacia-anadir {
+  border: none;
+  background: transparent;
+  color: var(--color-violeta);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.agenda-tablas {
+  margin-top: 22px;
+}

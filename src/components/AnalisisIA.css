@@ -152,3 +152,32 @@
   font-size: 11.5px;
   color: var(--color-texto-tenue);
 }
+
+/* Modo edición del análisis */
+.analisis-edita-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.analisis-edita-fila {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.analisis-edita-campos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.analisis textarea.edicion-input,
+.analisis textarea.edicion-mini {
+  resize: vertical;
+  line-height: 1.5;
+}

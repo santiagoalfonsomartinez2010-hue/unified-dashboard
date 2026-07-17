@@ -1,0 +1,227 @@
+/* Estilos compartidos de la edición manual del panel: modal Personalizar,
+   modal Nueva tabla y los controles de los modos de edición. */
+
+.edicion-etiqueta {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-texto-suave);
+}
+
+.edicion-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-sm);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.edicion-input:focus {
+  outline: none;
+  border-color: var(--color-violeta);
+}
+
+/* --- Modal Personalizar --- */
+
+.personalizar-icono {
+  background: var(--color-violeta) !important;
+  color: var(--color-onacento) !important;
+}
+
+.personalizar-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.personalizar-emoji {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--color-borde);
+  border-radius: 10px;
+  background: var(--color-fondo);
+  font-size: 18px;
+}
+
+.personalizar-emoji:hover {
+  border-color: var(--color-texto-tenue);
+}
+
+.personalizar-emoji.elegido {
+  border-color: var(--color-violeta);
+  background: var(--violeta-tinte);
+}
+
+.personalizar-emoji-libre {
+  width: 64px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1.5px dashed var(--color-borde);
+  border-radius: 10px;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-size: 15px;
+  font-family: inherit;
+  text-align: center;
+}
+
+.personalizar-emoji-libre:focus {
+  outline: none;
+  border-color: var(--color-violeta);
+}
+
+.personalizar-modos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.personalizar-modos button {
+  padding: 10px;
+  border: 1.5px solid var(--color-borde);
+  border-radius: 10px;
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.personalizar-modos button.elegido {
+  border-color: var(--color-violeta);
+  background: var(--violeta-tinte);
+  color: var(--color-texto);
+}
+
+.personalizar-acentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.personalizar-acento {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  outline: 2px solid transparent;
+  cursor: pointer;
+}
+
+.personalizar-acento.elegido {
+  border-color: var(--color-card);
+  outline-color: var(--color-texto);
+}
+
+.personalizar-acento-libre {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1.5px dashed var(--color-texto-tenue);
+  color: var(--color-texto-suave);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.personalizar-acento-libre input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* --- Modal Nueva tabla --- */
+
+.nuevatabla-plantillas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.nuevatabla-plantillas button {
+  padding: 6px 12px;
+  border: 1.5px solid var(--color-borde);
+  border-radius: 999px;
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.nuevatabla-plantillas button:hover {
+  border-color: var(--color-violeta);
+  color: var(--color-texto);
+}
+
+.nuevatabla-crear {
+  width: 100%;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* --- Controles genéricos de los modos de edición --- */
+
+.edicion-mini {
+  padding: 7px 9px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-size: 12.5px;
+  font-family: inherit;
+  min-width: 0;
+  width: 100%;
+}
+
+.edicion-mini:focus {
+  outline: none;
+  border-color: var(--color-violeta);
+}
+
+.edicion-quitar {
+  border: none;
+  background: transparent;
+  color: var(--color-texto-tenue);
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.edicion-quitar:hover {
+  color: var(--color-rojo);
+  background: var(--rojo-tinte);
+}
+
+.edicion-anadir {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1.5px dashed var(--color-borde);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-texto-suave);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.edicion-anadir:hover {
+  border-color: var(--color-violeta);
+  color: var(--color-texto);
+}

@@ -51,7 +51,14 @@ preguntas y edita el panel por ti.
    - edita el estilo visual (tema claro/oscuro, color de acento),
    - edita la información (renombra el panel o las fuentes, corrige métricas,
      edita tablas y eventos, quita fuentes…).
-8. **Modo ejemplo:** botón "Datos de ejemplo" para ver la demo completa sin
+8. **Edición manual completa:** todo se puede personalizar sin IA —
+   **tablas manuales** desde cero con plantillas (proveedores, clientes,
+   citas, gastos, inventario, equipo), editor de tablas (celdas, filas,
+   columnas), métricas, renombrar fuentes y cambiarlas de categoría, añadir
+   /editar/borrar citas en la Agenda, modo edición del Resumen (KPIs,
+   titular, alertas y tareas propias) y modal "Personalizar" (nombre, emoji,
+   tema claro/oscuro y color de acento).
+9. **Modo ejemplo:** botón "Datos de ejemplo" para ver la demo completa sin
    API key ni archivos reales.
 
 ## Configuración

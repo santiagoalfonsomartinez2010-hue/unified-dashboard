@@ -68,3 +68,38 @@
   color: var(--color-rojo);
   background: var(--rojo-tinte);
 }
+
+/* Modo edición de los KPIs */
+.kpi-editando {
+  gap: 7px;
+}
+
+.kpi-edita-icono {
+  width: 52px !important;
+  text-align: center;
+  font-size: 15px;
+}
+
+.kpi-edita-valor {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.kpi-anadir {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-style: dashed;
+  color: var(--color-texto-suave);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+}
+
+.kpi-anadir:hover {
+  border-color: var(--color-violeta);
+  color: var(--color-texto);
+}

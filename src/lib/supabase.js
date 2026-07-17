@@ -65,6 +65,10 @@ export function alCambiarSesion(callback) {
 // Mensajes de error de Supabase traducidos a algo legible en español
 function traducirErrorAuth(mensaje) {
   const m = (mensaje || '').toLowerCase()
+  // "Load failed" (Safari) / "Failed to fetch" (Chrome): el navegador no pudo
+  // conectar con el proyecto de Supabase (URL mal escrita o proyecto pausado)
+  if (m.includes('load failed') || m.includes('failed to fetch') || m.includes('networkerror'))
+    return 'No se pudo conectar con Supabase. Comprueba que tu proyecto no esté pausado (en supabase.com) y que VITE_SUPABASE_URL sea exactamente la URL del proyecto.'
   if (m.includes('invalid login credentials')) return 'Email o contraseña incorrectos.'
   if (m.includes('already registered')) return 'Ese email ya tiene una cuenta. Inicia sesión.'
   if (m.includes('password should be at least'))

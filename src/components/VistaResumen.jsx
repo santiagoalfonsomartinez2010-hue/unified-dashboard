@@ -14,6 +14,8 @@ export default function VistaResumen({
   analisis,
   analizando,
   avisoAnalisis,
+  editando,
+  onEditarAnalisis,
   onActualizarAnalisis,
 }) {
   const porFuente = listas
@@ -44,6 +46,8 @@ export default function VistaResumen({
         numFuentes={listas.length}
         totalRegistros={totalRegistros}
         numEventos={eventos.length}
+        editable={editando}
+        onCambiar={(kpis) => onEditarAnalisis({ kpis })}
       />
 
       <div className="vista-rejilla-2">
@@ -52,6 +56,8 @@ export default function VistaResumen({
           analizando={analizando}
           aviso={avisoAnalisis}
           hayFuentes={listas.length > 0}
+          editable={editando}
+          onEditar={onEditarAnalisis}
           onActualizar={onActualizarAnalisis}
         />
         <div className="panel-card">

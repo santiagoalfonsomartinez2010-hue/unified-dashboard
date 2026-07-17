@@ -224,6 +224,34 @@ export function IconoLista({ tam = 18 }) {
   )
 }
 
+export function IconoLapiz({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+      <path d="m13.5 6.5 3 3" />
+    </svg>
+  )
+}
+
+export function IconoPaleta({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-.8 2-1.7 0-.8-.5-1.3-.5-2 0-1 .8-1.8 1.9-1.8h2.1a3 3 0 0 0 3-3c0-4.8-3.9-8.5-8.5-8.5z" />
+      <circle cx="7.8" cy="10.5" r="1.1" />
+      <circle cx="12" cy="7.8" r="1.1" />
+      <circle cx="16.2" cy="10.5" r="1.1" />
+    </svg>
+  )
+}
+
+export function IconoCheck({ tam = 18 }) {
+  return (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" {...base}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </svg>
+  )
+}
+
 // Icono de cada categoría del panel (para la navegación por apartados)
 export function IconoCategoria({ categoria, tam = 18 }) {
   if (categoria === 'finanzas') return <IconoMoneda tam={tam} />
