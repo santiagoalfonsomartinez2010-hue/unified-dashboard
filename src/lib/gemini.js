@@ -17,9 +17,10 @@ import { parsearExcel, leerTexto, archivoABase64 } from './parseArchivo'
   llamada debería ir en un backend.
 */
 
-// Los modelos 1.5 fueron retirados de la API pública; usamos un modelo 2.x
-// actual por defecto. Se puede sobrescribir con VITE_GEMINI_MODEL.
-const MODELO = (import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash').trim()
+// Google retira modelos antiguos para las cuentas nuevas (los 1.5 y también
+// gemini-2.5-flash-lite ya no están disponibles). Usamos un modelo actual
+// disponible en la capa gratuita. Se puede sobrescribir con VITE_GEMINI_MODEL.
+const MODELO = (import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash').trim()
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`
 
 // Categorías fijas en las que el modelo clasifica cada fuente. El panel las
