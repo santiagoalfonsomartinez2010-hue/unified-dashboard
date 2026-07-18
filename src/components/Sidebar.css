@@ -81,8 +81,8 @@
 }
 
 .sidebar-paneles button.peligro:hover {
-  border-color: #f87171;
-  color: #f87171;
+  border-color: var(--color-rojo);
+  color: var(--color-rojo);
 }
 
 /* Navegación principal */
@@ -220,7 +220,7 @@
 }
 
 .sidebar-fuente-punto.error {
-  background: #f87171;
+  background: var(--color-rojo);
 }
 
 @keyframes parpadeo {
@@ -241,7 +241,7 @@
 }
 
 .sidebar-guardado.error {
-  color: #f87171;
+  color: var(--color-rojo);
 }
 
 .sidebar-guardado.guardando {
@@ -289,7 +289,7 @@
 }
 
 .sidebar-usuario button:hover {
-  color: #f87171;
+  color: var(--color-rojo);
   background: var(--color-card-hover);
 }
 

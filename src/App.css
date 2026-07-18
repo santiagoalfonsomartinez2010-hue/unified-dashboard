@@ -32,7 +32,7 @@
 }
 
 .app-cargando-error p:first-child {
-  color: #f87171;
+  color: var(--color-rojo);
 }
 
 .app-cargando-pista {

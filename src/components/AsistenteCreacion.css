@@ -236,7 +236,7 @@
 }
 
 .asistente-archivo button:hover {
-  color: #f87171;
+  color: var(--color-rojo);
 }
 
 .asistente-aviso {

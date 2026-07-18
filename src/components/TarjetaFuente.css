@@ -70,7 +70,7 @@
 
 .tarjeta-quitar:hover {
   background: var(--color-card-hover);
-  color: #f87171;
+  color: var(--color-rojo);
 }
 
 .tarjeta-estado {
@@ -86,7 +86,7 @@
   padding: 9px 12px;
   border-radius: var(--radio-sm);
   background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+  color: var(--color-rojo);
   font-size: 12.5px;
   word-break: break-word;
 }

@@ -53,7 +53,19 @@ import './App.css'
 let contadorId = 0
 const nuevoId = () => `f-${Date.now()}-${contadorId++}`
 
-const TEMA_POR_DEFECTO = { modo: 'oscuro', acento: '#a3e635' }
+const TEMA_POR_DEFECTO = { modo: 'claro', acento: '#6366f1' }
+
+// Tema por defecto anterior (oscuro + lima). Los paneles guardados con este
+// tema usaban el valor por defecto de entonces, así que al abrirlos se pasan
+// al nuevo tema claro; si el usuario eligió otros colores a mano, se respetan.
+const TEMA_LEGADO = { modo: 'oscuro', acento: '#a3e635' }
+
+function normalizarTema(t) {
+  if (!t) return TEMA_POR_DEFECTO
+  if (t.modo === TEMA_LEGADO.modo && (t.acento || '').toLowerCase() === TEMA_LEGADO.acento)
+    return TEMA_POR_DEFECTO
+  return t
+}
 
 // Convierte un color #rrggbb en su tinte translúcido para badges y fondos
 function tinteDeAcento(hex) {
@@ -181,7 +193,7 @@ export default function App() {
     setPerfil(d.perfil || null)
     setFuentes((d.fuentes || []).filter((f) => f.estado !== 'procesando'))
     setAnalisis(migrarAnalisis(d))
-    setTema(d.tema || TEMA_POR_DEFECTO)
+    setTema(normalizarTema(d.tema))
     setAvisoAnalisis(null)
     setVista('resumen')
     setEstadoGuardado('guardado')
@@ -197,7 +209,7 @@ export default function App() {
       setNombrePanel(extras.nombrePanel || 'Mi panel')
       setPerfil(extras.perfil || null)
       setAnalisis(extras.analisis || null)
-      setTema(extras.tema || TEMA_POR_DEFECTO)
+      setTema(normalizarTema(extras.tema))
     }
     setEstadoGuardado('local')
     // Sin datos previos: arranca con el formulario de creación
@@ -256,7 +268,8 @@ export default function App() {
 
   useEffect(() => {
     const raiz = document.documentElement
-    if (tema.modo === 'claro') raiz.setAttribute('data-tema', 'claro')
+    // La base es clara; el modo oscuro se activa con data-tema="oscuro".
+    if (tema.modo === 'oscuro') raiz.setAttribute('data-tema', 'oscuro')
     else raiz.removeAttribute('data-tema')
     if (/^#[0-9a-f]{6}$/i.test(tema.acento || '')) {
       raiz.style.setProperty('--color-violeta', tema.acento)

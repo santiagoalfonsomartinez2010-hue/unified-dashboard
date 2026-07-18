@@ -8,14 +8,14 @@ import './Edicion.css'
 */
 
 const ACENTOS = [
-  '#a3e635', // lima (por defecto)
-  '#6366f1', // violeta
-  '#22d3ee', // cian
-  '#10b981', // verde
-  '#f59e0b', // ámbar
-  '#f472b6', // rosa
-  '#ef4444', // rojo
-  '#e879f9', // fucsia
+  '#6366f1', // índigo (por defecto)
+  '#2563eb', // azul
+  '#16a34a', // verde
+  '#0891b2', // cian
+  '#d97706', // ámbar
+  '#db2777', // rosa
+  '#dc2626', // rojo
+  '#7c3aed', // violeta
 ]
 
 const EMOJIS = ['📊', '💈', '🏋️', '🔧', '🍽️', '🛒', '💶', '📚', '🏠', '🐾', '🚗', '🌱']

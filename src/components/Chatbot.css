@@ -135,7 +135,7 @@
 
 .chatbot-mensaje.error p {
   border-color: rgba(248, 113, 113, 0.4);
-  color: #f87171;
+  color: var(--color-rojo);
 }
 
 .chatbot-acciones {
