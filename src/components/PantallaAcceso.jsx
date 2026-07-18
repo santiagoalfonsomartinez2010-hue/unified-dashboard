@@ -12,8 +12,8 @@ import './PantallaAcceso.css'
   explica y se ofrece continuar en modo local (los datos se quedan solo en
   este navegador).
 */
-export default function PantallaAcceso({ onModoLocal }) {
-  const [modo, setModo] = useState('entrar') // 'entrar' | 'registro'
+export default function PantallaAcceso({ onModoLocal, onVolver, modoInicial = 'entrar' }) {
+  const [modo, setModo] = useState(modoInicial) // 'entrar' | 'registro'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -43,6 +43,11 @@ export default function PantallaAcceso({ onModoLocal }) {
   return (
     <div className="acceso">
       <div className="acceso-tarjeta">
+        {onVolver && (
+          <button className="acceso-volver" type="button" onClick={onVolver}>
+            ← Volver
+          </button>
+        )}
         <div className="acceso-logo">
           <span className="acceso-logo-cuadro">E</span>
           <div>

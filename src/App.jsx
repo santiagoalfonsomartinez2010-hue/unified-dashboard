@@ -5,6 +5,7 @@ import ModalApiKey from './components/ModalApiKey'
 import ModalPersonalizar from './components/ModalPersonalizar'
 import ModalNuevaTabla from './components/ModalNuevaTabla'
 import PantallaAcceso from './components/PantallaAcceso'
+import Landing from './components/Landing'
 import AsistenteCreacion from './components/AsistenteCreacion'
 import Chatbot from './components/Chatbot'
 import { inferirTipoArchivo } from './lib/parseArchivo'
@@ -94,6 +95,11 @@ export default function App() {
   const [sesion, setSesion] = useState(undefined) // undefined = comprobando
   const [modoLocal, setModoLocal] = useState(false)
   const [estadoGuardado, setEstadoGuardado] = useState(null)
+
+  // Portada: mientras no haya sesión se muestra la landing; al pulsar un CTA
+  // se abre el formulario de acceso en la pestaña correspondiente.
+  const [accesoAbierto, setAccesoAbierto] = useState(false)
+  const [accesoModo, setAccesoModo] = useState('entrar') // 'entrar' | 'registro'
 
   // Paneles del usuario (en la nube) y panel activo
   const [paneles, setPaneles] = useState([])
@@ -196,6 +202,15 @@ export default function App() {
     setEstadoGuardado('local')
     // Sin datos previos: arranca con el formulario de creación
     if (fuentesLocales.length === 0 && !extras) setAsistenteAbierto(true)
+  }
+
+  // "Probar demo" desde la landing: entra en modo local con datos de ejemplo,
+  // sin crear cuenta ni abrir el asistente.
+  function probarDemo() {
+    omitirGuardado.current = true
+    setModoLocal(true)
+    setEstadoGuardado('local')
+    cargarEjemplo()
   }
 
   async function salir() {
@@ -591,9 +606,31 @@ export default function App() {
     return <div className="app-cargando">Cargando…</div>
   }
 
-  // 2) Sin sesión: crear cuenta / iniciar sesión (obligatorio antes de crear paneles)
+  // 2) Sin sesión: primero la landing (portada); al pulsar un CTA se abre el
+  //    formulario de acceso (crear cuenta / iniciar sesión).
   if (!modoLocal && !sesion) {
-    return <PantallaAcceso onModoLocal={entrarModoLocal} />
+    if (!accesoAbierto) {
+      return (
+        <Landing
+          onCrear={() => {
+            setAccesoModo('registro')
+            setAccesoAbierto(true)
+          }}
+          onIniciar={() => {
+            setAccesoModo('entrar')
+            setAccesoAbierto(true)
+          }}
+          onDemo={probarDemo}
+        />
+      )
+    }
+    return (
+      <PantallaAcceso
+        modoInicial={accesoModo}
+        onVolver={() => setAccesoAbierto(false)}
+        onModoLocal={entrarModoLocal}
+      />
+    )
   }
 
   // 3) Con sesión pero sin panel activo: o el asistente de creación (primer

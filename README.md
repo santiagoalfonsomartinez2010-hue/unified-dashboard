@@ -162,6 +162,7 @@ src/
     ejemplo.js               Datos simulados del modo ejemplo
     visuales.js              Colores estables por nombre (avatares)
   components/
+    Landing.jsx              Portada / landing (antes de iniciar sesión)
     PantallaAcceso.jsx       Crear cuenta / iniciar sesión (obligatorio)
     Sidebar.jsx              Navegación por apartados, selector de paneles, cuenta
     Cabecera.jsx             Barra superior: título del apartado + acciones
