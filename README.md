@@ -168,7 +168,8 @@ src/
     Cabecera.jsx             Barra superior: título del apartado + acciones
     Panel.jsx                Enrutador de apartados del dashboard
     VistaResumen.jsx         Apartado Resumen: KPIs, análisis, donut, eventos
-    VistaAgenda.jsx          Apartado Agenda: eventos agrupados por día
+    VistaAgenda.jsx          Apartado Agenda: calendario mensual interactivo
+    VistaFinanzas.jsx        Apartado Finanzas: tiles, barras y donut + tablas
     VistaCategoria.jsx       Apartado por categoría: tablas estilo app
     VistaFuentes.jsx         Apartado Fuentes: gestión de datos conectados
     AsistenteCreacion.jsx    Formulario por pasos al crear un panel (perfil)

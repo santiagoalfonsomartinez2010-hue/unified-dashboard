@@ -1,0 +1,256 @@
+/* Calendario mensual interactivo del apartado Agenda */
+
+.cal-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.cal {
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-card);
+  padding: 16px 18px;
+}
+
+.cal-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cal-titulo {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-nav button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.cal-nav button:hover {
+  border-color: var(--color-violeta);
+  color: var(--color-texto);
+}
+
+.cal-nav .cal-hoy {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.cal-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.cal-cabeceras {
+  margin-bottom: 5px;
+}
+
+.cal-dia-cabecera {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-texto-tenue);
+  padding-bottom: 2px;
+}
+
+.cal-celda {
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid var(--color-borde);
+  border-radius: 9px;
+  background: var(--color-card);
+  text-align: left;
+  overflow: hidden;
+}
+
+.cal-celda:hover {
+  border-color: var(--color-violeta);
+}
+
+.cal-celda.fuera {
+  background: var(--color-fondo);
+  opacity: 0.5;
+}
+
+.cal-celda.sel {
+  border-color: var(--color-violeta);
+  box-shadow: 0 0 0 1px var(--color-violeta) inset;
+}
+
+.cal-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-texto-suave);
+  align-self: flex-start;
+}
+
+.cal-celda.hoy .cal-num {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  color: var(--color-onacento);
+  background: var(--color-violeta);
+}
+
+.cal-eventos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cal-chip {
+  font-size: 10px;
+  line-height: 1.4;
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-mas {
+  font-size: 9.5px;
+  color: var(--color-texto-tenue);
+  padding-left: 3px;
+}
+
+/* Panel lateral del día seleccionado */
+.cal-dia-panel {
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-card);
+  padding: 16px 18px;
+  position: sticky;
+  top: 12px;
+}
+
+.cal-dia-panel h3 {
+  font-size: 15px;
+  text-transform: capitalize;
+}
+
+.cal-dia-fecha {
+  font-size: 11.5px;
+  color: var(--color-texto-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-dia-eventos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.cal-dia-vacio {
+  font-size: 12.5px;
+  color: var(--color-texto-tenue);
+}
+
+.cal-dia-evento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: var(--radio-sm);
+  background: var(--color-fondo);
+  border: 1px solid var(--color-borde);
+  border-left: 3px solid var(--color-violeta);
+}
+
+.cal-dia-evento-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cal-dia-evento-txt strong {
+  font-size: 13px;
+}
+
+.cal-dia-evento-txt span {
+  font-size: 11px;
+  color: var(--color-texto-tenue);
+}
+
+.cal-dia-evento-btns {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cal-dia-evento.editando {
+  flex-wrap: wrap;
+  border-left-color: var(--color-borde);
+}
+
+.cal-dia-evento.editando .edicion-mini {
+  width: 100%;
+}
+
+.cal-guardar {
+  padding: 8px 12px;
+}
+
+.cal-dia-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--color-borde);
+  padding-top: 14px;
+}
+
+.cal-dia-anadir {
+  justify-content: center;
+}
+
+/* Responsive: el panel del día baja debajo del calendario */
+@media (max-width: 780px) {
+  .cal-layout {
+    grid-template-columns: 1fr;
+  }
+  .cal-dia-panel {
+    position: static;
+  }
+  .cal-celda {
+    min-height: 64px;
+  }
+  .cal-chip {
+    font-size: 0;
+    height: 5px;
+    padding: 0;
+    border-radius: 999px;
+  }
+}

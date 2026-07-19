@@ -1,0 +1,137 @@
+/* Elementos visuales del apartado de Finanzas */
+
+.fin-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.fin-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-card);
+}
+
+.fin-tile-et {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-texto-tenue);
+}
+
+.fin-tile b {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.fin-tile-pct {
+  font-size: 11.5px;
+  color: var(--color-texto-tenue);
+}
+
+/* Barras horizontales */
+.fin-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fin-barra-fila {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.fin-barra-nombre {
+  font-size: 12px;
+  color: var(--color-texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-barra-pista {
+  height: 12px;
+  background: var(--color-card-hover);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fin-barra {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-violeta);
+  transition: width 0.4s ease;
+  min-width: 3px;
+}
+
+.fin-barra-valor {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-texto);
+  white-space: nowrap;
+}
+
+/* Donut por estado */
+.fin-donut {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.fin-donut-svg {
+  width: 128px;
+  height: 128px;
+  flex-shrink: 0;
+}
+
+.fin-donut-leyenda {
+  list-style: none;
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.fin-donut-leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--color-texto-suave);
+}
+
+.fin-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.fin-donut-nombre {
+  flex: 1;
+  min-width: 0;
+}
+
+.fin-donut-cifra {
+  color: var(--color-texto);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .fin-barra-fila {
+    grid-template-columns: 60px 1fr auto;
+  }
+}

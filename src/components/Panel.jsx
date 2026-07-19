@@ -4,6 +4,7 @@ import Cabecera from './Cabecera'
 import VistaResumen from './VistaResumen'
 import VistaAgenda from './VistaAgenda'
 import VistaCategoria from './VistaCategoria'
+import VistaFinanzas from './VistaFinanzas'
 import VistaFuentes from './VistaFuentes'
 import { infoCategoria } from '../lib/categorias'
 import './Panel.css'
@@ -178,7 +179,15 @@ export default function Panel({
       {vista === 'fuentes' && (
         <VistaFuentes fuentes={fuentes} onQuitarFuente={onQuitarFuente} />
       )}
-      {vista.startsWith('cat:') && (
+      {vista === 'cat:finanzas' && (
+        <VistaFinanzas
+          fuentes={fuentes}
+          onEditarFuente={onEditarFuente}
+          onQuitarFuente={onQuitarFuente}
+          onNuevaTabla={onNuevaTabla}
+        />
+      )}
+      {vista.startsWith('cat:') && vista !== 'cat:finanzas' && (
         <VistaCategoria
           categoria={vista.slice(4)}
           fuentes={fuentes}
