@@ -137,6 +137,21 @@
   color: var(--color-rojo);
 }
 
+/* Icono emoji de los apartados diseñados por la IA (alineado con los SVG) */
+.sidebar-emoji {
+  width: 18px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Etiqueta de grupo dentro de la navegación */
+.sidebar-seccion-nav {
+  margin: 12px 8px 4px;
+}
+
 .sidebar-contador {
   margin-left: auto;
   padding: 1px 8px;

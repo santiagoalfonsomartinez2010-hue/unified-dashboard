@@ -30,16 +30,22 @@ preguntas y edita el panel por ti.
    Cruza TODAS las fuentes con el perfil del usuario y devuelve: el **tipo de
    dashboard** (panel de pagos, gestión de peluquería…), **KPIs
    personalizados** calculados de los datos, **conexiones detectadas** entre
-   fuentes (el mismo cliente en dos tablas, stock frente a agenda…) y
-   **sugerencias accionables**. Se regenera solo al añadir o quitar datos.
-5. **Dashboard tipo app, por apartados:** cada panel se navega desde la
-   barra lateral como una aplicación de verdad — **Resumen** (KPIs con badge,
-   análisis & alertas con tareas marcables, donut por categoría, gráficos y
-   próximos eventos), **Agenda** (todos los eventos por día), **un apartado
-   por cada categoría de datos** (Finanzas, Clientes, Personas, Inventario…)
-   con tablas estilo app (buscador, avatares con iniciales y pastillas de
-   estado) y **Fuentes** (gestión de los datos conectados). Tema negro con
-   acento verde lima configurable por el chatbot.
+   fuentes (el mismo cliente en dos tablas, stock frente a agenda…),
+   **sugerencias accionables** y las **secciones del dashboard diseñadas por
+   la propia IA** (ver siguiente punto). Se regenera solo al añadir o quitar
+   datos.
+5. **Dashboard diseñado por la IA, por apartados:** además del **Resumen**
+   (KPIs con badge, análisis & alertas con tareas marcables, donut por
+   categoría, gráficos y próximos eventos) y la **Agenda** (calendario
+   mensual interactivo), la IA **diseña apartados a medida para cada
+   negocio**: decide qué secciones necesita el panel (¿cuánto me deben?,
+   ¿qué se me echa encima?, ¿qué se está agotando?…), en qué orden van y qué
+   visualización le va mejor a cada dato (tiles de cifras, barras, donut,
+   tabla, lista de hitos o texto). No rellena una plantilla: cada dashboard
+   tiene sus propias secciones. Debajo, la zona **"Tus datos"** mantiene un
+   apartado por categoría (Finanzas con gráficas, Clientes, Personas,
+   Inventario…) con tablas editables estilo app y **Fuentes** (gestión de los
+   datos conectados).
 6. **Conexión oficial con Google (pendiente):** importar Gmail, Google
    Calendar y Google Sheets está implementado en el código
    (`src/lib/google.js` y `ConexionesGoogle.jsx`) pero todavía no está

@@ -1,4 +1,5 @@
 import { parsearExcel, leerTexto, archivoABase64 } from './parseArchivo'
+import { parseImporte } from './finanzas'
 
 /*
   Llamadas a la API de Google Gemini.
@@ -293,8 +294,25 @@ Devuelve SOLO un JSON válido (sin texto adicional, sin markdown) con esta estru
   "titular": "una frase con el estado global según los datos, con cifras concretas",
   "kpis": [ { "etiqueta": "nombre de la cifra", "valor": "valor con su unidad", "detalle": "matiz corto (ej: 'de 5 facturas', '+2 esta semana')" } ],
   "conexiones": [ { "titulo": "máx. 5 palabras", "texto": "conexión concreta detectada CRUZANDO al menos dos fuentes o datos, con cifras" } ],
-  "sugerencias": [ "entre 2 y 4 acciones recomendadas, concretas y accionables, adaptadas al perfil" ]
+  "sugerencias": [ "entre 2 y 4 acciones recomendadas, concretas y accionables, adaptadas al perfil" ],
+  "secciones": [
+    {
+      "id": "identificador-corto-en-minusculas-sin-espacios",
+      "titulo": "nombre del apartado, máx. 3 palabras",
+      "icono": "un único emoji",
+      "descripcion": "1 frase: qué enseña este apartado y para qué le sirve al usuario",
+      "widgets": [ ...entre 1 y 4 bloques visuales, en el orden en que deben verse... ]
+    }
+  ]
 }
+
+Los "widgets" son los bloques visuales de cada sección. Tipos disponibles (elige el que mejor cuente cada dato):
+- { "tipo": "tiles", "items": [ { "etiqueta": "...", "valor": "cifra con unidad", "detalle": "matiz corto (opcional)", "color": "verde" | "rojo" | "amarillo" | "acento" (opcional; verde=bien, rojo=alerta) } ] } → fila de cifras grandes (2-4 items)
+- { "tipo": "barras", "titulo": "...", "unidad": "€ / uds / … (opcional)", "datos": [ { "etiqueta": "...", "valor": número } ] } → comparar magnitudes (3-8 barras)
+- { "tipo": "donut", "titulo": "...", "unidad": "opcional", "datos": [ { "etiqueta": "...", "valor": número } ] } → repartos de un total (2-5 partes)
+- { "tipo": "tabla", "titulo": "...", "columnas": ["..."], "filas": [ ["celda", ...] ] } → ranking o detalle (máx. 8 filas y 4 columnas; elige tú las columnas útiles, no vuelques tablas enteras)
+- { "tipo": "lista", "titulo": "...", "items": [ { "texto": "...", "detalle": "matiz corto (opcional)" } ] } → hitos, avisos o pasos (2-6 items)
+- { "tipo": "texto", "titulo": "...", "texto": "1-3 frases" } → una observación que merece su propio bloque
 
 Reglas:
 - "kpis": entre 3 y 4 cifras que de verdad importen a ESTE usuario según su perfil (no recuentos triviales de filas).
@@ -302,12 +320,114 @@ Reglas:
 - "conexiones": entre 2 y 4. Busca relaciones reales: el mismo cliente en dos fuentes, gastos frente a ingresos,
   citas que chocan con disponibilidad del equipo, inventario que afecta a trabajos agendados… Si solo hay una
   fuente, cruza columnas dentro de ella (p. ej. estado de pago por cliente).
+- "secciones": AQUÍ DISEÑAS TÚ EL DASHBOARD. Decide qué apartados necesita ESTE negocio (entre 2 y 4), en qué
+  orden y qué visualización le va mejor a cada dato. No repitas el mismo esquema siempre: una peluquería no
+  necesita los mismos apartados que un panel de pagos. Cada sección debe responder una pregunta concreta del
+  usuario (¿cuánto me deben?, ¿qué se me echa encima?, ¿qué se está agotando?…), no describir un archivo.
+  Calcula todos los valores a partir de los registros. En "barras" y "donut", "valor" es un número SIN unidad
+  (la unidad va en su campo). No dupliques dentro de una sección lo que ya cuentan los KPIs de arriba.
 - No inventes datos que no estén en las fuentes. Escribe en español, cercano y claro.`
+
+// Convierte "valor" de un dato de gráfica en número (acepta "4.850 €" por si
+// el modelo ignora la regla de devolverlo sin unidad)
+function numeroDeDato(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : null
+  return parseImporte(v)
+}
+
+const TIPOS_WIDGET = ['tiles', 'barras', 'donut', 'tabla', 'lista', 'texto']
+
+// Sanea las secciones diseñadas por la IA para que el renderizador genérico
+// nunca reviente: tipos desconocidos fuera, valores numéricos coercionados,
+// longitudes acotadas e ids únicos.
+export function validarSecciones(lista) {
+  if (!Array.isArray(lista)) return []
+  const vistos = new Set()
+  const secciones = []
+  for (const s of lista.slice(0, 6)) {
+    if (!s || typeof s !== 'object') continue
+    const titulo = String(s.titulo || '').trim()
+    if (!titulo) continue
+    let id =
+      String(s.id || titulo)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40) || `seccion-${secciones.length + 1}`
+    while (vistos.has(id)) id += '-2'
+    vistos.add(id)
+
+    const widgets = []
+    for (const w of (Array.isArray(s.widgets) ? s.widgets : []).slice(0, 6)) {
+      if (!w || !TIPOS_WIDGET.includes(w.tipo)) continue
+      if (w.tipo === 'tiles') {
+        const items = (Array.isArray(w.items) ? w.items : [])
+          .filter((t) => t && t.etiqueta && t.valor !== undefined)
+          .slice(0, 4)
+          .map((t) => ({
+            etiqueta: String(t.etiqueta),
+            valor: String(t.valor),
+            detalle: t.detalle ? String(t.detalle) : null,
+            color: ['verde', 'rojo', 'amarillo', 'acento'].includes(t.color) ? t.color : null,
+          }))
+        if (items.length) widgets.push({ tipo: 'tiles', items })
+      } else if (w.tipo === 'barras' || w.tipo === 'donut') {
+        const datos = (Array.isArray(w.datos) ? w.datos : [])
+          .map((d) => d && { etiqueta: String(d.etiqueta ?? '—'), valor: numeroDeDato(d.valor) })
+          .filter((d) => d && d.valor != null && d.valor >= 0)
+          .slice(0, w.tipo === 'donut' ? 6 : 10)
+        if (datos.length >= 2)
+          widgets.push({
+            tipo: w.tipo,
+            titulo: String(w.titulo || ''),
+            unidad: w.unidad ? String(w.unidad) : null,
+            datos,
+          })
+      } else if (w.tipo === 'tabla') {
+        const columnas = (Array.isArray(w.columnas) ? w.columnas : []).slice(0, 4).map(String)
+        const filas = (Array.isArray(w.filas) ? w.filas : [])
+          .filter(Array.isArray)
+          .slice(0, 8)
+          .map((fila) => fila.slice(0, columnas.length).map((c) => String(c ?? '')))
+        if (columnas.length && filas.length)
+          widgets.push({ tipo: 'tabla', titulo: String(w.titulo || ''), columnas, filas })
+      } else if (w.tipo === 'lista') {
+        const items = (Array.isArray(w.items) ? w.items : [])
+          .map((it) =>
+            typeof it === 'string'
+              ? { texto: it, detalle: null }
+              : it && it.texto
+                ? { texto: String(it.texto), detalle: it.detalle ? String(it.detalle) : null }
+                : null
+          )
+          .filter(Boolean)
+          .slice(0, 8)
+        if (items.length) widgets.push({ tipo: 'lista', titulo: String(w.titulo || ''), items })
+      } else if (w.tipo === 'texto') {
+        const texto = String(w.texto || '').trim()
+        if (texto) widgets.push({ tipo: 'texto', titulo: String(w.titulo || ''), texto })
+      }
+    }
+
+    if (widgets.length === 0) continue
+    secciones.push({
+      id,
+      titulo: titulo.slice(0, 40),
+      icono: typeof s.icono === 'string' ? s.icono.slice(0, 4) : '✨',
+      descripcion: String(s.descripcion || ''),
+      widgets,
+    })
+  }
+  return secciones
+}
 
 /*
   Análisis inteligente conjunto del panel: cruza TODAS las fuentes con el
   perfil del usuario y devuelve tipo de dashboard, KPIs personalizados,
-  conexiones entre fuentes, titular y sugerencias.
+  conexiones entre fuentes, titular, sugerencias y las SECCIONES del
+  dashboard diseñadas por la IA (apartados con sus widgets).
 */
 export async function analizarPanelCompleto(fuentes, perfil, apiKey) {
   const cuerpo = fuentes
@@ -348,5 +468,6 @@ ${cuerpo}`,
     .filter((k) => k && k.etiqueta && k.valor !== undefined)
     .slice(0, 4)
   resultado.conexiones = resultado.conexiones.filter((c) => c && c.texto).slice(0, 4)
+  resultado.secciones = validarSecciones(resultado.secciones)
   return resultado
 }

@@ -16,12 +16,14 @@ import './Sidebar.css'
 
 /*
   Barra lateral estilo app: logo, selector de paneles del usuario y la
-  NAVEGACIÓN POR APARTADOS del dashboard (Resumen, Agenda, un apartado por
-  categoría de datos y Fuentes), más las acciones y la cuenta abajo.
+  NAVEGACIÓN POR APARTADOS del dashboard — Resumen, Agenda, los apartados
+  DISEÑADOS POR LA IA en el análisis (secciones) y, como zona de datos, un
+  apartado por categoría y Fuentes — más las acciones y la cuenta abajo.
 */
 export default function Sidebar({
   fuentes,
   categorias,
+  secciones = [],
   vista,
   hayApiKey,
   paneles,
@@ -107,6 +109,20 @@ export default function Sidebar({
           >
             <IconoCalendario /> Agenda
           </button>
+        )}
+        {secciones.map((s) => (
+          <button
+            key={s.id}
+            className={`sidebar-item ${vista === `ia:${s.id}` ? 'activo' : ''}`}
+            type="button"
+            onClick={() => onVista(`ia:${s.id}`)}
+            title={s.descripcion || undefined}
+          >
+            <span className="sidebar-emoji">{s.icono || '✨'}</span> {s.titulo}
+          </button>
+        ))}
+        {secciones.length > 0 && (categorias.length > 0 || fuentes.length > 0) && (
+          <div className="sidebar-seccion sidebar-seccion-nav">Tus datos</div>
         )}
         {categorias.map((cat) => (
           <button

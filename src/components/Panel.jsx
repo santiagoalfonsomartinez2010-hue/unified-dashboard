@@ -6,13 +6,15 @@ import VistaAgenda from './VistaAgenda'
 import VistaCategoria from './VistaCategoria'
 import VistaFinanzas from './VistaFinanzas'
 import VistaFuentes from './VistaFuentes'
+import VistaSeccionIA from './VistaSeccionIA'
 import { infoCategoria } from '../lib/categorias'
 import './Panel.css'
 
 /*
   Zona principal del dashboard, organizada por APARTADOS navegables desde la
-  barra lateral (como una app de verdad): Resumen, Agenda, un apartado por
-  cada categoría de datos presente y Fuentes.
+  barra lateral (como una app de verdad): Resumen, Agenda, los apartados que
+  la IA diseñó en el análisis (vista "ia:<id>"), un apartado por cada
+  categoría de datos presente y Fuentes.
 */
 export default function Panel({
   vista,
@@ -88,6 +90,11 @@ export default function Panel({
     )
   }
 
+  // Apartado diseñado por la IA activo (si la vista es "ia:<id>")
+  const seccionIA = vista.startsWith('ia:')
+    ? (analisis?.secciones || []).find((s) => s.id === vista.slice(3))
+    : null
+
   // Cabecera según el apartado activo
   let titulo = ''
   let subtitulo = ''
@@ -106,6 +113,10 @@ export default function Panel({
   } else if (vista === 'fuentes') {
     titulo = 'Fuentes'
     subtitulo = 'Gestiona los datos conectados a este panel.'
+  } else if (seccionIA) {
+    titulo = `${seccionIA.icono ? `${seccionIA.icono} ` : ''}${seccionIA.titulo}`
+    badge = 'Diseñado por la IA'
+    subtitulo = seccionIA.descripcion || ''
   } else if (vista.startsWith('cat:')) {
     const cat = vista.slice(4)
     const info = infoCategoria(cat)
@@ -179,6 +190,7 @@ export default function Panel({
       {vista === 'fuentes' && (
         <VistaFuentes fuentes={fuentes} onQuitarFuente={onQuitarFuente} />
       )}
+      {seccionIA && <VistaSeccionIA seccion={seccionIA} />}
       {vista === 'cat:finanzas' && (
         <VistaFinanzas
           fuentes={fuentes}

@@ -181,6 +181,93 @@ export function analisisDeEjemplo() {
       'Decide la renovación de Lucía Ferrer antes de su vencimiento para no perder capacidad administrativa.',
       'Haz pedido de cable y tubo de cobre antes del inicio de obra para evitar parones.',
     ],
+    // Apartados que la IA habría diseñado para ESTE negocio: cada uno
+    // responde una pregunta concreta con los widgets que mejor le van.
+    secciones: [
+      {
+        id: 'cobros',
+        titulo: 'Cobros',
+        icono: '💶',
+        descripcion: 'Qué has facturado este semestre, qué te deben y quién concentra el riesgo.',
+        widgets: [
+          {
+            tipo: 'tiles',
+            items: [
+              { etiqueta: 'Facturado', valor: '13.460 €', detalle: '5 facturas', color: null },
+              { etiqueta: 'Pendiente de cobro', valor: '7.490 €', detalle: '2 facturas', color: 'rojo' },
+              { etiqueta: 'Ya cobrado', valor: '5.970 €', detalle: '44 % del total', color: 'verde' },
+            ],
+          },
+          {
+            tipo: 'barras',
+            titulo: 'Facturación por cliente',
+            unidad: '€',
+            datos: [
+              { etiqueta: 'Reformas Marín', valor: 11050 },
+              { etiqueta: 'Panadería El Horno', valor: 1290 },
+              { etiqueta: 'Clínica Sonrisa', valor: 640 },
+              { etiqueta: 'Gimnasio Vital', valor: 480 },
+            ],
+          },
+          {
+            tipo: 'donut',
+            titulo: 'Estado de las facturas',
+            unidad: '€',
+            datos: [
+              { etiqueta: 'Cobrado', valor: 5970 },
+              { etiqueta: 'Pendiente', valor: 7490 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'obras',
+        titulo: 'Obras y visitas',
+        icono: '🚧',
+        descripcion: 'La carga de trabajo de las próximas semanas y lo que puede atascarla.',
+        widgets: [
+          {
+            tipo: 'lista',
+            titulo: 'Próximos hitos',
+            items: [
+              { texto: 'Visita presupuesto en Cafetería La Plaza', detalle: 'en 2 días' },
+              { texto: 'Inicio de la obra del almacén (Reformas Marín)', detalle: 'en 5 días' },
+              { texto: 'Fin del contrato temporal de Lucía Ferrer', detalle: 'en 9 días' },
+              { texto: 'Entrega de instalación en Gimnasio Vital', detalle: 'en 18 días' },
+            ],
+          },
+          {
+            tipo: 'texto',
+            titulo: 'Riesgo de personal',
+            texto:
+              'El contrato de Lucía Ferrer (administración) termina justo cuando arranca la obra del almacén: decide su renovación antes para no quedarte sin oficina en plena punta de trabajo.',
+          },
+        ],
+      },
+      {
+        id: 'almacen',
+        titulo: 'Almacén',
+        icono: '📦',
+        descripcion: 'El material que se está agotando antes de que empiecen las obras.',
+        widgets: [
+          {
+            tipo: 'tabla',
+            titulo: 'Por reponer',
+            columnas: ['Material', 'Unidades', 'Se usa en'],
+            filas: [
+              ['Cable 2,5 mm (rollo)', '3', 'Instalaciones eléctricas'],
+              ['Tubo cobre 18 mm', '6', 'Climatización'],
+            ],
+          },
+          {
+            tipo: 'texto',
+            titulo: 'Sugerencia',
+            texto:
+              'Haz el pedido de cable y tubo de cobre antes del inicio de la obra del almacén (5 días) para evitar parones.',
+          },
+        ],
+      },
+    ],
     esEjemplo: true,
   }
 }

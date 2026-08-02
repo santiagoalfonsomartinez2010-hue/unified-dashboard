@@ -294,15 +294,21 @@ export default function App() {
     (cat) => cat !== 'agenda' && listas.some((f) => f.resultado.categoria === cat)
   )
 
-  // Si el apartado activo deja de existir (se quitó su última fuente), vuelve al resumen
+  // Apartados diseñados por la IA en el análisis conjunto
+  const seccionesIA = analisis?.secciones || []
+
+  // Si el apartado activo deja de existir (se quitó su última fuente o el
+  // análisis se regeneró con otras secciones), vuelve al resumen
   useEffect(() => {
     if (vista.startsWith('cat:') && !categoriasPresentes.includes(vista.slice(4))) {
       setVista('resumen')
     } else if (vista === 'fuentes' && fuentes.length === 0) {
       setVista('resumen')
+    } else if (vista.startsWith('ia:') && !seccionesIA.some((s) => s.id === vista.slice(3))) {
+      setVista('resumen')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vista, claveFuentes])
+  }, [vista, claveFuentes, analisis])
 
   // Ejecuta el análisis conjunto (cruza todas las fuentes con el perfil)
   async function ejecutarAnalisis(clave) {
@@ -691,6 +697,7 @@ export default function App() {
       <Sidebar
         fuentes={fuentes}
         categorias={categoriasPresentes}
+        secciones={seccionesIA}
         vista={vista}
         hayApiKey={Boolean(apiKey)}
         paneles={paneles}
