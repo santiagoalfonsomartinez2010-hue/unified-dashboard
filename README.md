@@ -23,48 +23,79 @@ preguntas y edita el panel por ti.
    consiste tu trabajo y en qué te va a ayudar, y qué quieres añadir. Ese
    "perfil" personaliza todo el análisis de la IA. Los archivos se añaden
    todos de golpe y, al pulsar **Crear**, se analizan a la vez.
-3. **Subida de archivos** (clic o arrastrar): Excel/CSV (se parsean con
-   `xlsx`), PDF e imágenes (Gemini los lee por visión/OCR), calendarios
-   `.ics`, JSON y texto.
-4. **Análisis inteligente conjunto:** la IA no se limita a volcar tablas.
-   Cruza TODAS las fuentes con el perfil del usuario y devuelve: el **tipo de
-   dashboard** (panel de pagos, gestión de peluquería…), **KPIs
-   personalizados** calculados de los datos, **conexiones detectadas** entre
-   fuentes (el mismo cliente en dos tablas, stock frente a agenda…),
-   **sugerencias accionables** y las **secciones del dashboard diseñadas por
-   la propia IA** (ver siguiente punto). Se regenera solo al añadir o quitar
-   datos.
-5. **Dashboard diseñado por la IA, por apartados:** además del **Resumen**
+3. **Subida de archivos** (clic o arrastrar): Excel/CSV, PDF e imágenes
+   (Gemini los lee por visión/OCR), calendarios `.ics`, JSON y texto.
+4. **Análisis de datos de las hojas de cálculo (en local, sin IA):** un Excel
+   no se le manda al modelo: se analiza entero en el navegador con un
+   pipeline por etapas (`src/lib/analisis/`) antes de dibujar nada.
+
+   ```
+   Excel → lectura → estructura → perfilado → interpretación → relaciones
+         → calidad → métricas → visualizaciones → validación → dashboard
+   ```
+
+   - **Lectura inteligente:** no da por hecho que la fila 1 son cabeceras.
+     Detecta dónde empieza cada tabla, separa varias tablas en una misma
+     hoja, replica celdas combinadas, descarta columnas vacías, renombra
+     duplicadas y excluye la fila de totales del pie comprobando que su cifra
+     cuadre con la suma de la columna.
+   - **Perfilado y semántica:** de cada columna saca tipo, nulos, únicos,
+     mínimo, máximo, media, mediana y valores extremos, y deduce qué
+     significa (importe, coste, fecha, cliente, ciudad, estado…) con un
+     **nivel de confianza**. Cuando el nombre y los valores se contradicen
+     mandan los valores: una columna llamada "Importe" que contiene fechas no
+     es dinero, y su confianza baja para no usarla en una cifra destacada.
+   - **Calidad:** avisa de fechas inválidas, monedas mezcladas, formatos
+     inconsistentes, filas repetidas y categorías escritas de varias formas
+     ("Madrid/madrid/MADRID"). Los datos originales **no se modifican**: se
+     calcula sobre una capa normalizada aparte.
+   - **Cifras calculadas sobre TODAS las filas**, no sobre una muestra, con
+     métricas derivadas (beneficio, margen, desviación sobre presupuesto,
+     crecimiento) solo cuando la fórmula es válida con esos datos.
+   - **Validación previa:** antes de enseñar nada se recalculan los totales
+     por separado y se contrastan; lo que no cuadra no se muestra.
+   - **Explicabilidad:** cada cifra y cada gráfico dicen de qué hoja, de qué
+     columnas y con qué fórmula salen.
+
+   Por eso **un Excel genera un dashboard completo aunque no haya API key**.
+5. **Análisis conjunto con IA:** con los datos ya calculados, Gemini cruza
+   TODAS las fuentes con el perfil del usuario y aporta lo que sabe hacer
+   mejor: **titular**, **conexiones detectadas** entre fuentes, **sugerencias
+   accionables** y el nombre de cada apartado. No recalcula cifras.
+6. **Dashboard adaptado a los datos, por apartados:** además del **Resumen**
    (KPIs con badge, análisis & alertas con tareas marcables, donut por
    categoría, gráficos y próximos eventos) y la **Agenda** (calendario
    mensual interactivo), la IA **diseña apartados a medida para cada
-   negocio**: decide qué secciones necesita el panel (¿cuánto me deben?,
-   ¿qué se me echa encima?, ¿qué se está agotando?…), en qué orden van y qué
-   visualización le va mejor a cada dato (tiles de cifras, barras, donut,
-   tabla, lista de hitos o texto). No rellena una plantilla: cada dashboard
-   tiene sus propias secciones. Debajo, la zona **"Tus datos"** mantiene un
+   negocio**. No hay plantilla fija: los apartados salen de lo que contiene
+   el archivo, y cada gráfico responde una pregunta concreta —evolución →
+   línea, comparación → barras, reparto → donut (solo con pocas categorías),
+   distribución → histograma, relación entre dos métricas → dispersión,
+   detalle → tabla—. Un Excel de ventas con fechas genera evolución,
+   comparativa y distribución; uno de Cliente/Ciudad/Estado genera recuentos
+   y reparto, y **no inventa ingresos ni crecimiento**. Debajo, la zona
+   **"Tus datos"** mantiene un
    apartado por categoría (Finanzas con gráficas, Clientes, Personas,
    Inventario…) con tablas editables estilo app y **Fuentes** (gestión de los
    datos conectados).
-6. **Conexión oficial con Google (pendiente):** importar Gmail, Google
+7. **Conexión oficial con Google (pendiente):** importar Gmail, Google
    Calendar y Google Sheets está implementado en el código
    (`src/lib/google.js` y `ConexionesGoogle.jsx`) pero todavía no está
    enganchado a la interfaz; se activará más adelante.
-7. **Chatbot inteligente:** un asistente flotante (funciona con la API key de
+8. **Chatbot inteligente:** un asistente flotante (funciona con la API key de
    Gemini de cada usuario) que:
    - responde preguntas sobre los datos del panel («¿cuántos proveedores
      nuevos han llegado esta semana?»),
    - edita el estilo visual (tema claro/oscuro, color de acento),
    - edita la información (renombra el panel o las fuentes, corrige métricas,
      edita tablas y eventos, quita fuentes…).
-8. **Edición manual completa:** todo se puede personalizar sin IA —
+9. **Edición manual completa:** todo se puede personalizar sin IA —
    **tablas manuales** desde cero con plantillas (proveedores, clientes,
    citas, gastos, inventario, equipo), editor de tablas (celdas, filas,
    columnas), métricas, renombrar fuentes y cambiarlas de categoría, añadir
    /editar/borrar citas en la Agenda, modo edición del Resumen (KPIs,
    titular, alertas y tareas propias) y modal "Personalizar" (nombre, emoji,
    tema claro/oscuro y color de acento).
-9. **Modo ejemplo:** botón "Datos de ejemplo" para ver la demo completa sin
+10. **Modo ejemplo:** botón "Datos de ejemplo" para ver la demo completa sin
    API key ni archivos reales.
 
 ## Configuración
@@ -137,6 +168,7 @@ npm install      # instalar dependencias
 npm run dev      # servidor de desarrollo (http://localhost:5173)
 npm run build    # build de producción
 npm run preview  # previsualizar el build
+npm test         # tests del pipeline de análisis (vitest)
 ```
 
 ## Deploy a Vercel
@@ -158,11 +190,27 @@ src/
   App.jsx                    Estado y lógica principal (sesión, paneles, fuentes, chatbot)
   index.css                  Sistema de diseño (tokens, tema oscuro y claro)
   lib/
-    gemini.js                Gemini: analizar fuentes + análisis conjunto del panel
+    analisis/                PIPELINE DE ANÁLISIS DE DATOS (todo en local)
+      index.js               Orquestador de etapas + resumen para el modelo
+      lectura.js             Saca TABLAS del Excel (cabeceras, varias tablas, totales)
+      tipos.js               Tipo de cada celda (número, fecha, moneda… formato ES)
+      perfilado.js           Estadística por columna + capa normalizada
+      semantica.js           Qué significa cada columna, con confianza
+      modelo.js              Une perfil + semántica + calidad por tabla
+      calidad.js             Problemas de los datos (sin tocar los originales)
+      relaciones.js          Claves compartidas entre hojas, con evidencia
+      agregacion.js          Totales, agrupaciones y series sobre TODAS las filas
+      metricas.js            KPIs y métricas derivadas, con su fórmula
+      insights.js            Patrones calculados (nunca explicaciones causales)
+      layout.js              Elige visualización y compone las secciones
+      validacion.js          Recalcula y descarta lo que no cuadra
+      formato.js             Formato de cifras en español
+    fuenteExcel.js           Puente pipeline → panel (y análisis sin API key)
+    gemini.js                Gemini: titular y redactar (no calcula cifras)
     chatbot.js               Chatbot: contexto del panel + acciones que puede ejecutar
     supabase.js              Cuentas y guardado de paneles en la nube
     google.js                OAuth de Google + lectores de Gmail/Calendar/Sheets
-    parseArchivo.js          Parseo de Excel/CSV, .ics/texto y base64
+    parseArchivo.js          Lectura de .ics/texto y base64 para PDF e imágenes
     categorias.js            Categorías fijas del panel y su color
     almacen.js               Persistencia local (modo local y API key)
     ejemplo.js               Datos simulados del modo ejemplo
@@ -178,6 +226,8 @@ src/
     VistaFinanzas.jsx        Apartado Finanzas: tiles, barras y donut + tablas
     VistaCategoria.jsx       Apartado por categoría: tablas estilo app
     VistaFuentes.jsx         Apartado Fuentes: gestión de datos conectados
+    VistaSeccionIA.jsx       Renderiza un apartado generado (línea, barras, donut,
+                             histograma, dispersión, tabla, lista) con su procedencia
     AsistenteCreacion.jsx    Formulario por pasos al crear un panel (perfil)
     AnalisisIA.jsx           Análisis & alertas: titular, conexiones, tareas
     Kpis.jsx                 Fila de cifras clave con badge de tendencia
