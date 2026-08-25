@@ -139,4 +139,50 @@ export function resumirParaModelo(resultado) {
   return partes.join('\n\n')
 }
 
+/*
+  Versión reducida del resumen que trabaja SOLO con la configuración, que es
+  lo que se guarda con el panel (los modelos, con todas las filas dentro, no
+  se persisten). Se usa en el análisis conjunto de varias fuentes.
+*/
+export function resumirConfiguracion(configuracion) {
+  if (!configuracion) return ''
+  const partes = []
+
+  partes.push(`Tipo detectado: ${configuracion.tipoDashboard}.`)
+  partes.push(
+    `Hojas: ${configuracion.fuentes
+      .map((f) => `"${f.hoja}" (${f.filas} filas, ${f.columnas} columnas)`)
+      .join(', ')}.`
+  )
+
+  if (configuracion.metricas?.length) {
+    partes.push(
+      `Columnas de métrica: ${configuracion.metricas.map((m) => `${m.columna} (${m.semantica})`).join(', ')}.`
+    )
+  }
+  if (configuracion.dimensiones?.length) {
+    partes.push(
+      `Columnas para agrupar: ${configuracion.dimensiones.map((d) => `${d.columna} (${d.semantica})`).join(', ')}.`
+    )
+  }
+
+  if (configuracion.kpis?.length) {
+    partes.push(
+      `Cifras ya calculadas y validadas: ${configuracion.kpis
+        .map((k) => `${k.etiqueta} = ${k.valorFormateado} [${k.procedencia?.formula}]`)
+        .join('; ')}.`
+    )
+  }
+  if (configuracion.insights?.length) {
+    partes.push(`Hallazgos calculados: ${configuracion.insights.map((i) => i.texto).join(' ')}`)
+  }
+
+  const graves = (configuracion.calidad?.problemas || []).filter((p) => p.gravedad !== 'baja')
+  if (graves.length) {
+    partes.push(`Avisos de calidad: ${graves.map((p) => p.mensaje).join(' ')}`)
+  }
+
+  return partes.join('\n')
+}
+
 export { leerLibro, construirModelo, detectarRelaciones, generarConfiguracion, validarConfiguracion }

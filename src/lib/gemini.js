@@ -1,5 +1,7 @@
-import { parsearExcel, leerTexto, archivoABase64 } from './parseArchivo'
+import { leerTexto, archivoABase64 } from './parseArchivo'
 import { parseImporte } from './finanzas'
+import { analizarExcelLocal } from './fuenteExcel'
+import { resumirParaModelo, resumirConfiguracion } from './analisis/index'
 
 /*
   Llamadas a la API de Google Gemini.
@@ -206,17 +208,22 @@ export async function llamarGeminiContents(apiKey, instruccion, contents) {
   - perfil (opcional): respuestas del asistente de creación, para que la
     normalización se adapte a lo que el usuario quiere ver.
 */
-export async function analizarFuente(file, tipoArchivo, apiKey, perfil = null) {
+export async function analizarFuente(file, tipoArchivo, apiKey, perfil = null, opciones = {}) {
+  /*
+    Las hojas de cálculo NO se le mandan al modelo. Se analizan enteras en
+    local (ver lib/analisis): así los totales salen de todas las filas y no de
+    una muestra, y el Excel funciona aunque no haya API key. El modelo entra
+    después, y solo para titular y redactar.
+  */
+  if (tipoArchivo === 'excel') {
+    return analizarExcel(file, apiKey, perfil, opciones)
+  }
+
   // Construimos las "parts" del mensaje según el tipo de archivo. En Gemini,
   // cada archivo binario (PDF/imagen) va como inline_data { mime_type, data }.
   const contexto = perfil ? `Contexto del dueño del panel: ${describirPerfil(perfil)}\n` : ''
   let partes
-  if (tipoArchivo === 'excel') {
-    const textoTabla = await parsearExcel(file)
-    partes = [
-      { text: `${contexto}Contenido del archivo "${file.name}" (en JSON por hojas):\n${textoTabla}` },
-    ]
-  } else if (tipoArchivo === 'calendario' || tipoArchivo === 'texto') {
+  if (tipoArchivo === 'calendario' || tipoArchivo === 'texto') {
     const texto = await leerTexto(file)
     partes = [{ text: `${contexto}Contenido del archivo "${file.name}":\n${texto}` }]
   } else if (tipoArchivo === 'pdf') {
@@ -243,6 +250,51 @@ export async function analizarFuente(file, tipoArchivo, apiKey, perfil = null) {
   if (!Array.isArray(resultado.registros)) resultado.registros = []
   if (!Array.isArray(resultado.eventos)) resultado.eventos = []
   if (!Array.isArray(resultado.metricas)) resultado.metricas = []
+  return resultado
+}
+
+const INSTRUCCION_TITULAR_EXCEL = `Eres el analista de datos de Empleia. Un motor de análisis YA ha leído por
+completo una hoja de cálculo y ha calculado y validado todas sus cifras. Tu único trabajo es ponerle nombre y
+describirla en el lenguaje del usuario.
+
+NO calcules nada. NO inventes cifras. NO contradigas los datos que se te dan: las cifras que aparecen ya están
+comprobadas contra el archivo original.
+
+Devuelve SOLO un JSON válido con esta estructura exacta:
+{
+  "titulo": "nombre corto y descriptivo del contenido (máx. 6 palabras)",
+  "categoria": "finanzas" | "personas" | "clientes" | "inventario" | "agenda" | "operaciones" | "otros",
+  "resumen": "1 o 2 frases explicando qué contiene este archivo y qué destaca, usando las cifras que se te dan"
+}`
+
+/*
+  Analiza una hoja de cálculo: el pipeline local hace TODO el trabajo de
+  datos y el modelo solo aporta el título, la categoría y el resumen.
+
+  Si no hay API key o Gemini falla, se devuelve igualmente el análisis local
+  completo con textos generados a partir de las propias cifras: un Excel
+  siempre produce un panel correcto, con o sin IA.
+*/
+async function analizarExcel(file, apiKey, perfil, opciones = {}) {
+  const { resultado, pipeline } = await analizarExcelLocal(file, opciones)
+
+  if (!apiKey) return resultado
+
+  try {
+    const contexto = perfil ? `Contexto del dueño del panel: ${describirPerfil(perfil)}\n` : ''
+    const texto = await llamarGemini(apiKey, INSTRUCCION_TITULAR_EXCEL, [
+      {
+        text: `${contexto}Archivo: "${file.name}"\n\n${resumirParaModelo(pipeline)}`,
+      },
+    ])
+    if (texto.titulo) resultado.titulo = String(texto.titulo)
+    if (CATEGORIAS.includes(texto.categoria)) resultado.categoria = texto.categoria
+    if (texto.resumen) resultado.resumen = String(texto.resumen)
+  } catch {
+    // El análisis local ya es válido: que falle la redacción no puede tumbar
+    // un dashboard cuyas cifras están calculadas y validadas.
+  }
+
   return resultado
 }
 
@@ -309,6 +361,7 @@ Devuelve SOLO un JSON válido (sin texto adicional, sin markdown) con esta estru
 Los "widgets" son los bloques visuales de cada sección. Tipos disponibles (elige el que mejor cuente cada dato):
 - { "tipo": "tiles", "items": [ { "etiqueta": "...", "valor": "cifra con unidad", "detalle": "matiz corto (opcional)", "color": "verde" | "rojo" | "amarillo" | "acento" (opcional; verde=bien, rojo=alerta) } ] } → fila de cifras grandes (2-4 items)
 - { "tipo": "barras", "titulo": "...", "unidad": "€ / uds / … (opcional)", "datos": [ { "etiqueta": "...", "valor": número } ] } → comparar magnitudes (3-8 barras)
+- { "tipo": "linea", "titulo": "...", "unidad": "opcional", "datos": [ { "etiqueta": "periodo", "valor": número } ] } → evolución en el tiempo (4-12 puntos, en orden cronológico)
 - { "tipo": "donut", "titulo": "...", "unidad": "opcional", "datos": [ { "etiqueta": "...", "valor": número } ] } → repartos de un total (2-5 partes)
 - { "tipo": "tabla", "titulo": "...", "columnas": ["..."], "filas": [ ["celda", ...] ] } → ranking o detalle (máx. 8 filas y 4 columnas; elige tú las columnas útiles, no vuelques tablas enteras)
 - { "tipo": "lista", "titulo": "...", "items": [ { "texto": "...", "detalle": "matiz corto (opcional)" } ] } → hitos, avisos o pasos (2-6 items)
@@ -326,6 +379,10 @@ Reglas:
   usuario (¿cuánto me deben?, ¿qué se me echa encima?, ¿qué se está agotando?…), no describir un archivo.
   Calcula todos los valores a partir de los registros. En "barras" y "donut", "valor" es un número SIN unidad
   (la unidad va en su campo). No dupliques dentro de una sección lo que ya cuentan los KPIs de arriba.
+- Las fuentes que traen sus cifras YA CALCULADAS Y VALIDADAS vienen marcadas como tales. Para esas: NO recalcules
+  nada, NO corrijas sus cifras y NO les diseñes secciones (ya las tienen). Úsalas solo para escribir el titular,
+  las conexiones y las sugerencias, copiando sus cifras tal cual. Diseña secciones únicamente para las fuentes
+  que llegan con una muestra de registros (PDFs, imágenes, calendarios y textos).
 - No inventes datos que no estén en las fuentes. Escribe en español, cercano y claro.`
 
 // Convierte "valor" de un dato de gráfica en número (acepta "4.850 €" por si
@@ -335,7 +392,7 @@ function numeroDeDato(v) {
   return parseImporte(v)
 }
 
-const TIPOS_WIDGET = ['tiles', 'barras', 'donut', 'tabla', 'lista', 'texto']
+const TIPOS_WIDGET = ['tiles', 'barras', 'linea', 'donut', 'tabla', 'lista', 'texto']
 
 // Sanea las secciones diseñadas por la IA para que el renderizador genérico
 // nunca reviente: tipos desconocidos fuera, valores numéricos coercionados,
@@ -373,7 +430,7 @@ export function validarSecciones(lista) {
             color: ['verde', 'rojo', 'amarillo', 'acento'].includes(t.color) ? t.color : null,
           }))
         if (items.length) widgets.push({ tipo: 'tiles', items })
-      } else if (w.tipo === 'barras' || w.tipo === 'donut') {
+      } else if (w.tipo === 'barras' || w.tipo === 'linea' || w.tipo === 'donut') {
         const datos = (Array.isArray(w.datos) ? w.datos : [])
           .map((d) => d && { etiqueta: String(d.etiqueta ?? '—'), valor: numeroDeDato(d.valor) })
           .filter((d) => d && d.valor != null && d.valor >= 0)
@@ -430,11 +487,27 @@ export function validarSecciones(lista) {
   dashboard diseñadas por la IA (apartados con sus widgets).
 */
 export async function analizarPanelCompleto(fuentes, perfil, apiKey) {
+  // Apartados que ya ha construido el pipeline local con datos reales. No
+  // pasan por validarSecciones: vienen validados por validacion.js, con sus
+  // cifras contrastadas contra el archivo original.
+  const seccionesLocales = seccionesDeFuentesLocales(fuentes)
+
   const cuerpo = fuentes
     .map((f, i) => {
       const r = f.resultado
+      const cabecera = `Fuente ${i + 1} — "${r.titulo}" (categoría: ${r.categoria}, ${r.totalRegistros ?? (r.registros || []).length} registros en total)`
+
+      // Hoja de cálculo analizada en local: se le dan las conclusiones, no
+      // los datos. El prompt no crece aunque el Excel tenga 100.000 filas.
+      if (r.analisis) {
+        return `${cabecera}
+Resumen: ${r.resumen}
+${resumirConfiguracion(r.analisis)}
+Esta fuente YA tiene sus apartados construidos y sus cifras validadas: no diseñes secciones para ella.`
+      }
+
       const registros = (r.registros || []).slice(0, 25)
-      return `Fuente ${i + 1} — "${r.titulo}" (categoría: ${r.categoria}, ${(r.registros || []).length} registros en total)
+      return `${cabecera}
 Resumen: ${r.resumen}
 Columnas: ${(r.columnas || []).join(', ') || 'ninguna'}
 Registros (muestra): ${JSON.stringify(registros)}
@@ -468,6 +541,42 @@ ${cuerpo}`,
     .filter((k) => k && k.etiqueta && k.valor !== undefined)
     .slice(0, 4)
   resultado.conexiones = resultado.conexiones.filter((c) => c && c.texto).slice(0, 4)
-  resultado.secciones = validarSecciones(resultado.secciones)
+  // Delante los apartados calculados en local (cifras contrastadas), detrás
+  // los que haya diseñado el modelo para las fuentes que no son hojas de
+  // cálculo (PDFs, imágenes, calendarios).
+  resultado.secciones = [...seccionesLocales, ...validarSecciones(resultado.secciones)]
+
+  // Los KPIs de cabecera se prefieren calculados: si alguna fuente trae
+  // cifras validadas, mandan sobre las que redacte el modelo.
+  const kpisLocales = fuentes.flatMap((f) => f.resultado?.analisis?.kpis || [])
+  if (kpisLocales.length) {
+    resultado.kpis = kpisLocales.slice(0, 4).map((k) => ({
+      etiqueta: k.etiqueta,
+      valor: k.valorFormateado,
+      detalle: k.detalle || null,
+      procedencia: k.procedencia,
+    }))
+  }
+
   return resultado
+}
+
+/*
+  Recoge los apartados que el pipeline local ha construido para cada hoja de
+  cálculo. Con varias fuentes se prefijan los identificadores y se añade el
+  nombre del archivo al título, para que no se pisen entre ellas.
+*/
+function seccionesDeFuentesLocales(fuentes) {
+  const conAnalisis = fuentes.filter((f) => f.resultado?.analisis?.secciones?.length)
+  const varias = conAnalisis.length > 1
+
+  return conAnalisis.flatMap((f) =>
+    f.resultado.analisis.secciones.map((s) => ({
+      ...s,
+      id: `${f.id}-${s.id}`,
+      titulo: varias ? `${s.titulo} · ${f.resultado.titulo}` : s.titulo,
+      origen: 'local',
+      fuenteId: f.id,
+    }))
+  )
 }

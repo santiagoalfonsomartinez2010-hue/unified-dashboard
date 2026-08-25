@@ -40,7 +40,11 @@ export default function TarjetaFuente({ fuente, onQuitar }) {
       </header>
 
       {fuente.estado === 'procesando' && (
-        <p className="tarjeta-estado procesando">⏳ La IA está leyendo y organizando este archivo…</p>
+        // Las hojas de cálculo se analizan por etapas en local y van contando
+        // por dónde van; el resto de archivos solo pueden decir que esperan.
+        <p className="tarjeta-estado procesando">
+          ⏳ {fuente.progreso || 'La IA está leyendo y organizando este archivo…'}
+        </p>
       )}
 
       {fuente.estado === 'error' && (

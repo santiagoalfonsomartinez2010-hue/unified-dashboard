@@ -159,7 +159,40 @@ function graficosDeModelo(modelo) {
     }
   }
 
-  // --- 2. Comparación entre categorías (ranking)
+  // --- 2. Reparto de un total. Va antes que las barras a propósito: para una
+  // columna de pocas categorías (cobrado/pendiente) el donut responde mejor a
+  // "cómo se reparte el total", así que se queda esa dimensión y las barras
+  // la saltan en vez de dibujar el mismo dato dos veces.
+  const paraDonut = modelo.dimensiones.find((d) => {
+    if (![S.ESTADO, S.CATEGORIA, S.BOOLEANO].includes(d.semantica)) return false
+    const distintos = contarDistintos(modelo.perfil, d.indice)
+    return distintos >= 2 && distintos <= MAX_PORCIONES_DONUT
+  })
+  if (paraDonut) {
+    const { grupos } = agruparPor(modelo.perfil, paraDonut.indice, metrica ? metrica.indice : null, {
+      limite: MAX_PORCIONES_DONUT,
+    })
+    if (grupos.length >= 2) {
+      graficos.push({
+        id: `${modelo.tabla.id}:reparto:${paraDonut.columna.nombre}`,
+        tipo: 'donut',
+        titulo: `Reparto por ${paraDonut.columna.nombre.toLowerCase()}`,
+        pregunta: '¿Cómo se reparte el total?',
+        unidad: metrica?.unidad || null,
+        datos: grupos,
+        prioridad: 80,
+        confianza: Math.min(paraDonut.confianza, metrica?.confianza ?? 1),
+        procedencia: {
+          hoja: modelo.tabla.hoja,
+          columnas: metrica ? [paraDonut.columna.nombre, metrica.columna.nombre] : [paraDonut.columna.nombre],
+          formula: `${metrica ? `SUM(${metrica.columna.nombre})` : 'COUNT(filas)'} GROUP BY ${paraDonut.columna.nombre}`,
+        },
+      })
+      usados.add(`${paraDonut.columna.nombre}|${metrica?.columna.nombre ?? ''}`)
+    }
+  }
+
+  // --- 3. Comparación entre categorías (ranking)
   // Para comparar valen tanto las dimensiones (agrupan) como las entidades
   // (no agrupan, pero se rankean: "el producto que más factura").
   const dimensionesOrdenadas = ordenarDimensiones([...modelo.dimensiones, ...modelo.entidades])
@@ -194,36 +227,6 @@ function graficosDeModelo(modelo) {
     usados.add(clave)
 
     if (graficos.length >= 4) break
-  }
-
-  // --- 3. Reparto de un total: solo con pocas categorías Y aportando algo
-  // distinto de lo que ya cuentan las barras.
-  const paraDonut = modelo.dimensiones.find((d) => {
-    if (![S.ESTADO, S.CATEGORIA, S.BOOLEANO].includes(d.semantica)) return false
-    const distintos = contarDistintos(modelo.perfil, d.indice)
-    return distintos >= 2 && distintos <= MAX_PORCIONES_DONUT
-  })
-  if (paraDonut) {
-    const { grupos } = agruparPor(modelo.perfil, paraDonut.indice, metrica ? metrica.indice : null, {
-      limite: MAX_PORCIONES_DONUT,
-    })
-    if (grupos.length >= 2) {
-      graficos.push({
-        id: `${modelo.tabla.id}:reparto:${paraDonut.columna.nombre}`,
-        tipo: 'donut',
-        titulo: `Reparto por ${paraDonut.columna.nombre.toLowerCase()}`,
-        pregunta: '¿Cómo se reparte el total?',
-        unidad: metrica?.unidad || null,
-        datos: grupos,
-        prioridad: 80,
-        confianza: Math.min(paraDonut.confianza, metrica?.confianza ?? 1),
-        procedencia: {
-          hoja: modelo.tabla.hoja,
-          columnas: metrica ? [paraDonut.columna.nombre, metrica.columna.nombre] : [paraDonut.columna.nombre],
-          formula: `${metrica ? `SUM(${metrica.columna.nombre})` : 'COUNT(filas)'} GROUP BY ${paraDonut.columna.nombre}`,
-        },
-      })
-    }
   }
 
   // --- 4. Distribución: útil cuando hay muchas filas y una sola métrica clara
@@ -451,10 +454,10 @@ function componerSecciones(config, modelos) {
   // 1. Resumen: las cifras que importan
   if (config.kpis.length) {
     secciones.push({
-      id: 'resumen',
-      titulo: 'Resumen',
+      id: 'cifras',
+      titulo: 'Cifras clave',
       icono: config.emoji,
-      descripcion: 'Las cifras principales que se pueden calcular con estos datos.',
+      descripcion: 'Las cifras principales que se pueden calcular con estos datos, con su fórmula.',
       widgets: [
         {
           tipo: 'tiles',

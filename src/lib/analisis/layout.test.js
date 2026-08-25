@@ -118,6 +118,23 @@ describe('evitar información redundante', () => {
     expect(new Set(firmas).size).toBe(firmas.length)
   })
 
+  it('no cuenta la misma dimensión en barras y en donut a la vez', () => {
+    const config = configDe(
+      ['Factura', 'Cliente', 'Ciudad', 'Fecha', 'Importe', 'Estado'],
+      ventas(),
+      'Ventas'
+    )
+    // "Estado" tiene dos valores: le va mejor el donut, y entonces no debe
+    // aparecer además como barras.
+    const donut = config.graficos.find((g) => g.tipo === 'donut')
+    expect(donut.procedencia.columnas).toContain('Estado')
+
+    const dimensionesEnBarras = config.graficos
+      .filter((g) => g.tipo === 'barras')
+      .flatMap((g) => g.procedencia.columnas)
+    expect(dimensionesEnBarras).not.toContain('Estado')
+  })
+
   it('limita los KPIs de cabecera a cuatro', () => {
     const config = configDe(
       ['Factura', 'Cliente', 'Ciudad', 'Fecha', 'Importe', 'Estado'],
@@ -144,7 +161,7 @@ describe('layout adaptativo', () => {
       'Ventas'
     )
     const ids = config.secciones.map((s) => s.id)
-    expect(ids).toContain('resumen')
+    expect(ids).toContain('cifras')
     expect(ids).toContain('evolucion')
     expect(ids).toContain('comparativa')
     expect(ids).toContain('detalle')
@@ -177,7 +194,7 @@ describe('layout adaptativo', () => {
       'Ventas'
     )
     const ids = config.secciones.map((s) => s.id)
-    expect(ids.indexOf('resumen')).toBeLessThan(ids.indexOf('evolucion'))
+    expect(ids.indexOf('cifras')).toBeLessThan(ids.indexOf('evolucion'))
     expect(ids.indexOf('evolucion')).toBeLessThan(ids.indexOf('comparativa'))
     expect(ids.indexOf('comparativa')).toBeLessThan(ids.indexOf('detalle'))
   })

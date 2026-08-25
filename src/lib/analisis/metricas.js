@@ -123,7 +123,7 @@ export function generarKpis(contexto) {
 
     kpis.push({
       id: `${tabla.id}:distintos:${d.columna.nombre}`,
-      etiqueta: `${capitalizar(etiquetaEntidad(d.semantica, true))} distintos`,
+      etiqueta: distintosDe(d.semantica),
       valor: distintos,
       unidad: null,
       valorFormateado: formatearNumero(distintos),
@@ -439,16 +439,19 @@ function etiquetaDeTotal(campo, corto = false) {
   return corto ? campo.columna.nombre : `Total ${campo.columna.nombre.toLowerCase()}`
 }
 
-function etiquetaEntidad(semantica, plural = false) {
-  const mapa = {
-    [S.PERSONA]: ['cliente', 'clientes'],
-    [S.ORGANIZACION]: ['empresa', 'empresas'],
-    [S.PRODUCTO]: ['producto', 'productos'],
-    [S.PROYECTO]: ['proyecto', 'proyectos'],
-    [S.UBICACION]: ['ubicación', 'ubicaciones'],
-  }
-  const par = mapa[semantica] || ['valor', 'valores']
-  return plural ? par[1] : par[0]
+// Nombre de la entidad con su género, para que concuerde el adjetivo que
+// venga detrás ("Ubicaciones distintas", no "Ubicaciones distintos")
+const ENTIDAD_NOMBRE = {
+  [S.PERSONA]: { singular: 'cliente', plural: 'clientes', genero: 'm' },
+  [S.ORGANIZACION]: { singular: 'empresa', plural: 'empresas', genero: 'f' },
+  [S.PRODUCTO]: { singular: 'producto', plural: 'productos', genero: 'm' },
+  [S.PROYECTO]: { singular: 'proyecto', plural: 'proyectos', genero: 'm' },
+  [S.UBICACION]: { singular: 'ubicación', plural: 'ubicaciones', genero: 'f' },
+}
+
+function distintosDe(semantica) {
+  const e = ENTIDAD_NOMBRE[semantica] || { plural: 'valores', genero: 'm' }
+  return `${capitalizar(e.plural)} ${e.genero === 'f' ? 'distintas' : 'distintos'}`
 }
 
 function capitalizar(texto) {

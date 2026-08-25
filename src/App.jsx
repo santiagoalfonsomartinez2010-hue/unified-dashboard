@@ -10,6 +10,7 @@ import AsistenteCreacion from './components/AsistenteCreacion'
 import Chatbot from './components/Chatbot'
 import { inferirTipoArchivo } from './lib/parseArchivo'
 import { analizarFuente, analizarPanelCompleto, CATEGORIAS } from './lib/gemini'
+import { analisisLocalDePanel } from './lib/fuenteExcel'
 import { INFO_CATEGORIAS } from './lib/categorias'
 import {
   supabaseDisponible,
@@ -331,8 +332,24 @@ export default function App() {
   // Se relanza solo cuando cambia el conjunto de fuentes (y no hay ninguna
   // procesándose: así el lote del asistente se analiza entero de una vez).
   useEffect(() => {
-    if (!claveFuentes || !apiKey || hayProcesando) return
-    if (analisis?.esEjemplo || analisis?.clave === claveFuentes) return
+    if (!claveFuentes || hayProcesando) return
+    if (analisis?.clave === claveFuentes) return
+    // El análisis de ejemplo se mantiene MIENTRAS solo haya datos de ejemplo.
+    // En cuanto el usuario añade un archivo suyo, el panel pasa a hablar de
+    // sus datos en vez de seguir enseñando la demo.
+    if (analisis?.esEjemplo && fuentes.every((f) => f.esEjemplo)) return
+
+    /*
+      Sin API key el panel no se queda a medias: si las fuentes son hojas de
+      cálculo, ya traen su análisis hecho y se compone el panel con él. Solo
+      se pierden los textos redactados, no los datos.
+    */
+    if (!apiKey) {
+      const local = analisisLocalDePanel(fuentes.filter((f) => f.estado === 'listo'))
+      if (local) setAnalisis({ ...local, clave: claveFuentes })
+      return
+    }
+
     let cancelado = false
     const temporizador = setTimeout(async () => {
       setAnalizando(true)
@@ -370,11 +387,9 @@ export default function App() {
 
   /* ---------- Archivos subidos ---------- */
 
+  // Las hojas de cálculo se analizan en local, así que el selector se abre
+  // siempre; si hace falta API key lo decide procesarArchivos según el tipo.
   function pedirArchivos() {
-    if (!apiKey) {
-      setModalKeyAbierto(true)
-      return
-    }
     inputArchivosRef.current?.click()
   }
 
@@ -383,7 +398,15 @@ export default function App() {
   async function procesarArchivos(lista, perfilContexto = perfil) {
     const archivos = Array.from(lista || [])
     if (archivos.length === 0) return
-    if (!apiKey) {
+
+    /*
+      Un Excel se entiende entero en local: sus cifras, sus gráficos y sus
+      apartados no dependen de ninguna API. Solo se pide la key cuando hay
+      PDFs, imágenes, calendarios o textos, que sí necesitan al modelo para
+      poder leerse.
+    */
+    const necesitaIA = archivos.some((a) => inferirTipoArchivo(a.name) !== 'excel')
+    if (necesitaIA && !apiKey) {
       setModalKeyAbierto(true)
       return
     }
@@ -401,9 +424,18 @@ export default function App() {
     for (let i = 0; i < archivos.length; i++) {
       const meta = nuevas[i]
       try {
-        const resultado = await analizarFuente(archivos[i], meta.tipoArchivo, apiKey, perfilContexto)
+        // El pipeline de los Excel va avisando de cada etapa (leyendo,
+        // detectando estructura, entendiendo los datos…) para que la espera
+        // se vea por dentro en vez de ser un reloj de arena.
+        const onProgreso = (_id, texto) =>
+          setFuentes((previas) =>
+            previas.map((f) => (f.id === meta.id ? { ...f, progreso: texto } : f))
+          )
+        const resultado = await analizarFuente(archivos[i], meta.tipoArchivo, apiKey, perfilContexto, {
+          onProgreso,
+        })
         setFuentes((previas) =>
-          previas.map((f) => (f.id === meta.id ? { ...f, estado: 'listo', resultado } : f))
+          previas.map((f) => (f.id === meta.id ? { ...f, estado: 'listo', progreso: null, resultado } : f))
         )
       } catch (error) {
         setFuentes((previas) =>

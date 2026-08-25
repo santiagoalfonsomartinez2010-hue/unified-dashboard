@@ -137,7 +137,7 @@ describe('secciones tras la depuración', () => {
     const { configuracion: limpia } = validarConfiguracion(configuracion, [modelo])
     expect(limpia.secciones.find((s) => s.id === 'evolucion')).toBeUndefined()
     // El resto del panel sobrevive
-    expect(limpia.secciones.find((s) => s.id === 'resumen')).toBeDefined()
+    expect(limpia.secciones.find((s) => s.id === 'cifras')).toBeDefined()
   })
 
   it('el resumen refleja solo los KPIs que han sobrevivido', () => {
@@ -145,7 +145,7 @@ describe('secciones tras la depuración', () => {
     configuracion.kpis[0].valor = NaN
 
     const { configuracion: limpia } = validarConfiguracion(configuracion, [modelo])
-    const tiles = limpia.secciones.find((s) => s.id === 'resumen').widgets[0]
+    const tiles = limpia.secciones.find((s) => s.id === 'cifras').widgets[0]
     expect(tiles.items).toHaveLength(limpia.kpis.length)
     expect(tiles.items.every((i) => i.procedencia)).toBe(true)
   })

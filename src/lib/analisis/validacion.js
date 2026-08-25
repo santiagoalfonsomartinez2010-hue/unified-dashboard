@@ -192,7 +192,7 @@ function validarFiltro(filtro, incidencias) {
   apartado vacío.
 */
 function depurarSeccion(seccion, kpis, idsGraficos, configuracion) {
-  if (seccion.id === 'resumen') {
+  if (seccion.id === 'cifras') {
     if (!kpis.length) return null
     return {
       ...seccion,

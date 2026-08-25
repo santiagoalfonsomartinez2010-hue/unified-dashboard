@@ -27,16 +27,147 @@ function formatoValor(n, unidad) {
   return unidad ? `${texto} ${unidad}` : texto
 }
 
+/*
+  Explicabilidad: de dónde sale este número. Se muestra como title nativo
+  (aparece al posar el ratón) y en un pie discreto, para que cualquier cifra
+  del panel se pueda rastrear hasta su hoja, sus columnas y su fórmula.
+*/
+function textoProcedencia(p) {
+  if (!p) return null
+  const partes = []
+  if (p.hoja) partes.push(`Fuente: hoja "${p.hoja}"`)
+  if (p.columnas?.length) partes.push(`Columnas: ${p.columnas.join(', ')}`)
+  if (p.formula) partes.push(`Cálculo: ${p.formula}`)
+  if (p.explicacion) partes.push(p.explicacion)
+  return partes.join('\n')
+}
+
+function PieProcedencia({ procedencia, nota }) {
+  const texto = textoProcedencia(procedencia)
+  if (!texto && !nota) return null
+  return (
+    <p className="ia-procedencia" title={texto || undefined}>
+      {nota ? `${nota} ` : ''}
+      {procedencia?.formula ? <code>{procedencia.formula}</code> : null}
+      {procedencia?.hoja ? <span className="ia-procedencia-hoja"> · {procedencia.hoja}</span> : null}
+    </p>
+  )
+}
+
 function WidgetTiles({ widget }) {
   return (
     <div className="fin-tiles">
       {widget.items.map((t, i) => (
-        <div className="fin-tile" key={i}>
+        <div className="fin-tile" key={i} title={textoProcedencia(t.procedencia) || undefined}>
           <span className="fin-tile-et">{t.etiqueta.toUpperCase()}</span>
           <b style={t.color ? { color: COLOR_TILE[t.color] } : undefined}>{t.valor}</b>
           {t.detalle && <span className="fin-tile-pct">{t.detalle}</span>}
+          {t.procedencia?.formula && <span className="ia-tile-formula">{t.procedencia.formula}</span>}
         </div>
       ))}
+    </div>
+  )
+}
+
+/*
+  Evolución en el tiempo. Se dibuja como SVG con viewBox y sin tamaños fijos
+  para que escale con la tarjeta; los puntos llevan <title> para poder leer
+  el valor exacto de cada periodo.
+*/
+function WidgetLinea({ widget }) {
+  const datos = widget.datos || []
+  const valores = datos.map((d) => d.valor)
+
+  /*
+    La escala se ajusta a los datos, sin forzar el cero: en una serie que se
+    mueve entre 14.000 y 17.000, meter el cero deja la línea pegada al borde
+    de arriba y esconde justo la variación que se quiere ver. Se deja un
+    margen del 12 % arriba y abajo para que no toque los bordes.
+  */
+  const maxDato = Math.max(...valores)
+  const minDato = Math.min(...valores)
+  const margen = (maxDato - minDato) * 0.12 || Math.abs(maxDato) * 0.1 || 1
+  const max = maxDato + margen
+  const min = minDato - margen
+  const rango = max - min || 1
+
+  // viewBox con la proporción real del dibujo y escalado uniforme: así los
+  // puntos son círculos y no elipses estiradas.
+  const ancho = 400
+  const alto = 130
+  const x = (i) => (datos.length === 1 ? ancho / 2 : (i / (datos.length - 1)) * ancho)
+  const y = (v) => alto - ((v - min) / rango) * alto
+
+  const linea = datos.map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(2)} ${y(d.valor).toFixed(2)}`).join(' ')
+  const area = `${linea} L ${ancho} ${alto} L 0 ${alto} Z`
+
+  return (
+    <div className="panel-card">
+      {widget.titulo && <h3>{widget.titulo}</h3>}
+      <div className="ia-linea">
+        <svg viewBox={`0 0 ${ancho} ${alto}`} className="ia-linea-svg" role="img"
+             aria-label={widget.titulo || 'Evolución'}>
+          <path d={area} className="ia-linea-area" />
+          <path d={linea} className="ia-linea-trazo" />
+          {datos.map((d, i) => (
+            <circle key={i} cx={x(i)} cy={y(d.valor)} r="3.5" className="ia-linea-punto">
+              <title>{`${d.etiqueta}: ${formatoValor(d.valor, widget.unidad)}`}</title>
+            </circle>
+          ))}
+        </svg>
+        <div className="ia-linea-ejes">
+          {datos.map((d, i) => (
+            <span key={i} title={`${d.etiqueta}: ${formatoValor(d.valor, widget.unidad)}`}>
+              {d.etiqueta}
+            </span>
+          ))}
+        </div>
+      </div>
+      <PieProcedencia procedencia={widget.procedencia} nota={widget.nota} />
+    </div>
+  )
+}
+
+/*
+  Dispersión: relación entre dos métricas. Cada punto es un registro; los
+  ejes se etiquetan con el nombre real de la columna.
+*/
+function WidgetDispersion({ widget }) {
+  const puntos = widget.puntos || []
+  if (!puntos.length) return null
+
+  const xs = puntos.map((p) => p.x)
+  const ys = puntos.map((p) => p.y)
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const minY = Math.min(...ys)
+  const maxY = Math.max(...ys)
+  const rangoX = maxX - minX || 1
+  const rangoY = maxY - minY || 1
+
+  return (
+    <div className="panel-card">
+      {widget.titulo && <h3>{widget.titulo}</h3>}
+      <div className="ia-dispersion">
+        <svg viewBox="0 0 400 240" className="ia-dispersion-svg" role="img" aria-label={widget.titulo}>
+          {puntos.map((p, i) => (
+            <circle
+              key={i}
+              cx={((p.x - minX) / rangoX) * 384 + 8}
+              cy={232 - ((p.y - minY) / rangoY) * 224}
+              r="3"
+              className="ia-dispersion-punto"
+            >
+              <title>{`${widget.ejes?.x}: ${formatoValor(p.x, widget.ejes?.unidadX)} · ${widget.ejes?.y}: ${formatoValor(p.y, widget.ejes?.unidadY)}`}</title>
+            </circle>
+          ))}
+        </svg>
+        <div className="ia-dispersion-ejes">
+          <span>↔ {widget.ejes?.x}</span>
+          <span>↕ {widget.ejes?.y}</span>
+        </div>
+      </div>
+      <PieProcedencia procedencia={widget.procedencia} nota={widget.nota} />
     </div>
   )
 }
@@ -61,6 +192,7 @@ function WidgetBarras({ widget }) {
           </div>
         ))}
       </div>
+      <PieProcedencia procedencia={widget.procedencia} nota={widget.nota} />
     </div>
   )
 }
@@ -102,6 +234,7 @@ function WidgetDonut({ widget }) {
           ))}
         </ul>
       </div>
+      <PieProcedencia procedencia={widget.procedencia} nota={widget.nota} />
     </div>
   )
 }
@@ -130,6 +263,7 @@ function WidgetTabla({ widget }) {
           </tbody>
         </table>
       </div>
+      <PieProcedencia procedencia={widget.procedencia} nota={widget.nota} />
     </div>
   )
 }
@@ -140,7 +274,7 @@ function WidgetLista({ widget }) {
       {widget.titulo && <h3>{widget.titulo}</h3>}
       <ul className="ia-lista">
         {widget.items.map((it, i) => (
-          <li key={i}>
+          <li key={i} title={textoProcedencia(it.procedencia) || undefined}>
             <span className="ia-lista-texto">{it.texto}</span>
             {it.detalle && <span className="ia-lista-detalle">{it.detalle}</span>}
           </li>
@@ -162,7 +296,11 @@ function WidgetTexto({ widget }) {
 const RENDER = {
   tiles: WidgetTiles,
   barras: WidgetBarras,
+  // El histograma son barras de intervalos: mismo dibujo, otra pregunta
+  histograma: WidgetBarras,
+  linea: WidgetLinea,
   donut: WidgetDonut,
+  dispersion: WidgetDispersion,
   tabla: WidgetTabla,
   lista: WidgetLista,
   texto: WidgetTexto,
@@ -172,8 +310,10 @@ export default function VistaSeccionIA({ seccion }) {
   // Los tiles y las tablas ocupan todo el ancho; el resto de widgets se
   // empareja de dos en dos en una rejilla, en el orden que fijó la IA.
   const bloques = []
-  for (const w of seccion.widgets) {
-    if (w.tipo === 'tiles' || w.tipo === 'tabla') {
+  for (const w of (seccion.widgets || []).filter((w) => RENDER[w?.tipo])) {
+    // Las series temporales necesitan ancho para leerse; los tiles y las
+    // tablas, también.
+    if (w.tipo === 'tiles' || w.tipo === 'tabla' || w.tipo === 'linea') {
       bloques.push({ ancho: true, widgets: [w] })
     } else {
       const ultimo = bloques[bloques.length - 1]
@@ -187,13 +327,13 @@ export default function VistaSeccionIA({ seccion }) {
       {bloques.map((b, i) => {
         if (b.ancho) {
           const Widget = RENDER[b.widgets[0].tipo]
-          return <Widget key={i} widget={b.widgets[0]} />
+          return Widget ? <Widget key={i} widget={b.widgets[0]} /> : null
         }
         return (
           <div className="vista-rejilla-2" key={i}>
             {b.widgets.map((w, j) => {
               const Widget = RENDER[w.tipo]
-              return <Widget key={j} widget={w} />
+              return Widget ? <Widget key={j} widget={w} /> : null
             })}
           </div>
         )
