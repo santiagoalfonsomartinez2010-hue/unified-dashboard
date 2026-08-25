@@ -1,5 +1,5 @@
 import { SEMANTICA, clasificarEstado } from './semantica'
-import { totales, contarDistintos, agruparPor, serieTemporal, granularidadRecomendada, etiquetaDePeriodo } from './agregacion'
+import { totales, contarDistintos, agruparPor, serieTemporal, elegirGranularidad, etiquetaDePeriodo } from './agregacion'
 import { formatearNumero, formatearVariacion } from './formato'
 
 /*
@@ -114,7 +114,8 @@ export function generarKpis(contexto) {
   }
 
   // --- 3. Cuántos clientes / productos / ciudades distintos
-  for (const d of [...dimensiones, ...utilizables.filter((c) => c.rol === 'identificador')]) {
+  const nombrables = [...dimensiones, ...utilizables.filter((c) => ['identificador', 'entidad'].includes(c.rol))]
+  for (const d of nombrables) {
     if (!ENTIDADES.includes(d.semantica)) continue
     const distintos = contarDistintos(perfil, d.indice)
     // Si cada fila es uno distinto, el dato ya lo cuenta el KPI de recuento
@@ -336,7 +337,7 @@ function metricasDerivadas(contexto, metricas, nombreFila) {
 */
 function kpisDeCrecimiento(contexto, campoFecha, metricas, nombreFila) {
   const { tabla, perfil } = contexto
-  const granularidad = granularidadRecomendada(campoFecha.columna.rangoFechas)
+  const granularidad = elegirGranularidad(perfil, campoFecha.indice)
   if (!granularidad) return []
 
   const metrica = metricas.find((m) => MONETARIAS.includes(m.semantica)) || null

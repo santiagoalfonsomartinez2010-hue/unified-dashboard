@@ -38,6 +38,8 @@ export function construirModelo(tabla) {
     dimensiones: campos.filter((c) => c.rol === 'dimension' && !noFiables.has(c.columna.nombre)),
     temporales: campos.filter((c) => c.rol === 'temporal' && !noFiables.has(c.columna.nombre)),
     identificadores: campos.filter((c) => c.rol === 'identificador'),
+    // Nombres con demasiada variedad para agrupar, pero válidos para rankear
+    entidades: campos.filter((c) => c.rol === 'entidad' && !noFiables.has(c.columna.nombre)),
 
     filas: perfil.filas,
     granularidad: granularidadDelModelo(campos),

@@ -306,12 +306,27 @@ function proporcion(lista, prueba) {
 // Papel que juega la columna al construir el dashboard
 const SEMANTICAS_METRICA = [S.IMPORTE, S.INGRESO, S.COSTE, S.PRECIO, S.PRESUPUESTO, S.MARGEN, S.BENEFICIO, S.CANTIDAD, S.PORCENTAJE, S.DURACION]
 
+// Columnas que nombran "de quién o de qué" es cada fila
+const SEMANTICAS_ENTIDAD = [S.PERSONA, S.ORGANIZACION, S.PRODUCTO, S.PROYECTO, S.UBICACION, S.CATEGORIA]
+
 function decidirRol(semantica, perfil) {
   if (semantica === S.FECHA) return 'temporal'
   if (semantica === S.IDENTIFICADOR) return 'identificador'
   if (SEMANTICAS_METRICA.includes(semantica)) return perfil.esMetrica ? 'metrica' : 'ninguno'
   if ([S.EMAIL, S.URL, S.TELEFONO, S.TEXTO_LIBRE].includes(semantica)) return 'ninguno'
-  return perfil.esDimension ? 'dimension' : 'ninguno'
+  if (perfil.esDimension) return 'dimension'
+
+  /*
+    Una columna de nombres casi todos distintos ("Producto" en un catálogo de
+    60 referencias) no sirve para AGRUPAR —cada grupo tendría una fila— pero
+    sí para RANKEAR: "el producto que más factura" es una de las preguntas
+    más útiles que se le pueden hacer a un Excel. Se distingue de una
+    dimensión para que no acabe convertida en un desplegable de 60 opciones.
+  */
+  if (SEMANTICAS_ENTIDAD.includes(semantica) && !perfil.esIdentificador && perfil.longitudMediaTexto <= 60) {
+    return 'entidad'
+  }
+  return 'ninguno'
 }
 
 function decidirUnidad(semantica, perfil) {
