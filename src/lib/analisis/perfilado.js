@@ -72,6 +72,10 @@ export function perfilarColumna(crudos, nombre, posicion = 0) {
   const monedas = new Set()
   const distintos = new Set()
   const frecuencias = new Map()
+  // Escrituras distintas de un mismo valor ("Madrid", "madrid", "MADRID").
+  // Se guardan para poder AVISAR de que probablemente son la misma categoría,
+  // nunca para corregir el dato original por nuestra cuenta.
+  const variantes = new Map()
   const muestra = []
   let nulos = 0
   let numerosComoTexto = 0
@@ -106,6 +110,12 @@ export function perfilarColumna(crudos, nombre, posicion = 0) {
     } else if (c.tipo === TIPOS.TEXTO) {
       textos++
       longitudTexto += c.valor.length
+      const clave = claveNormalizada(c.valor)
+      if (variantes.size < MAX_FRECUENCIAS || variantes.has(clave)) {
+        const set = variantes.get(clave)
+        if (set) set.add(c.valor)
+        else variantes.set(clave, new Set([c.valor]))
+      }
     }
 
     const clave = typeof c.valor === 'string' ? claveNormalizada(c.valor) : c.valor
@@ -155,6 +165,7 @@ export function perfilarColumna(crudos, nombre, posicion = 0) {
     numerosComoTexto,
     longitudMediaTexto: textos ? redondear(longitudTexto / textos, 1) : 0,
     valoresFrecuentes: topFrecuencias(frecuencias, noNulos),
+    variantesEscritura: variantesConflictivas(variantes),
     muestra,
     normalizados,
   }
@@ -261,6 +272,16 @@ function topFrecuencias(mapa, noNulos, limite = 10) {
       cuenta,
       porcentaje: noNulos ? redondear((cuenta / noNulos) * 100, 1) : 0,
     }))
+}
+
+// Solo interesan los valores escritos de más de una forma
+function variantesConflictivas(mapa, limite = 12) {
+  const salida = []
+  for (const [clave, set] of mapa) {
+    if (set.size > 1) salida.push({ clave, formas: [...set].slice(0, 6) })
+    if (salida.length >= limite) break
+  }
+  return salida
 }
 
 function redondear(n, decimales) {
