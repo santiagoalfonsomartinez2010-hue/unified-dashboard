@@ -73,30 +73,37 @@ const COMPATIBLE = {
   [S.DESCONOCIDO]: ['texto', 'numero', 'numerico', 'fecha', 'booleano'],
 }
 
-// Pistas por NOMBRE de columna. El orden importa: gana la primera que encaje,
-// por eso "coste" va antes que el genérico "importe".
+/*
+  Pistas por NOMBRE de columna. El orden importa: gana la primera que encaje,
+  por eso "coste" va antes que el genérico "importe".
+
+  Todas las entradas admiten el PLURAL. Parece un detalle y no lo es: una
+  columna llamada "Costes" (que es como se escribe de verdad en un Excel) no
+  casaba con "\bcoste\b" y acababa interpretada como un recuento cualquiera,
+  con lo que el beneficio y el margen dejaban de calcularse.
+*/
 const PISTAS_NOMBRE = [
-  [/\b(margen|markup)\b/i, S.MARGEN],
-  [/\b(beneficio|ganancia|profit|resultado neto)\b/i, S.BENEFICIO],
-  [/\b(presupuesto|budget|estimad[oa]|previsto)\b/i, S.PRESUPUESTO],
-  [/\b(coste|costo|cost|gasto|gastos|expense|compra)\b/i, S.COSTE],
-  [/\b(ingreso|ingresos|venta|ventas|facturaci[oó]n|facturado|revenue|sales|cobro|cobrado)\b/i, S.INGRESO],
-  [/\b(precio|pvp|tarifa|price|importe unitario)\b/i, S.PRECIO],
-  [/\b(importe|monto|total|subtotal|amount|saldo|deuda|pago|valor)\b/i, S.IMPORTE],
-  [/\b(cantidad|unidades|uds|stock|existencias|qty|quantity|n[uú]mero de|recuento|piezas)\b/i, S.CANTIDAD],
-  [/\b(porcentaje|pct|ratio|tasa|%)\b/i, S.PORCENTAJE],
-  [/\b(duraci[oó]n|horas|d[ií]as|minutos|tiempo)\b/i, S.DURACION],
-  [/\b(fecha|date|d[ií]a|alta|baja|vencimiento|caducidad|inicio|fin|periodo|mes|a[nñ]o)\b/i, S.FECHA],
-  [/\b(email|correo|e-mail|mail)\b/i, S.EMAIL],
-  [/\b(tel[ée]fono|telefono|m[oó]vil|movil|phone|tlf|contacto telef)\b/i, S.TELEFONO],
-  [/\b(url|web|enlace|link|sitio)\b/i, S.URL],
-  [/\b(estado|situaci[oó]n|status|fase|etapa)\b/i, S.ESTADO],
-  [/\b(ciudad|provincia|pa[ií]s|localidad|municipio|regi[oó]n|zona|direcci[oó]n|c\.?p\.?|c[oó]digo postal|comunidad)\b/i, S.UBICACION],
-  [/\b(cliente|clientes|vendedor|comercial|empleado|responsable|persona|contacto|usuario|paciente|alumno|propietario|agente)\b/i, S.PERSONA],
-  [/\b(empresa|proveedor|compa[nñ][ií]a|organizaci[oó]n|entidad|raz[oó]n social)\b/i, S.ORGANIZACION],
-  [/\b(producto|art[ií]culo|articulo|material|referencia comercial|servicio|item)\b/i, S.PRODUCTO],
-  [/\b(proyecto|obra|expediente|campa[nñ]a|caso)\b/i, S.PROYECTO],
-  [/\b(categor[ií]a|tipo|familia|segmento|grupo|clase|canal|origen)\b/i, S.CATEGORIA],
+  [/\b(m[aá]rgenes|margen|markup)\b/i, S.MARGEN],
+  [/\b(beneficios?|ganancias?|profit|resultado neto)\b/i, S.BENEFICIO],
+  [/\b(presupuestos?|budget|estimad[oa]s?|previst[oa]s?)\b/i, S.PRESUPUESTO],
+  [/\b(costes?|costos?|costs?|gastos?|expenses?|compras?)\b/i, S.COSTE],
+  [/\b(ingresos?|ventas?|facturaci[oó]n|facturad[oa]s?|revenue|sales|cobros?|cobrad[oa]s?)\b/i, S.INGRESO],
+  [/\b(precios?|pvp|tarifas?|prices?|importe unitario)\b/i, S.PRECIO],
+  [/\b(importes?|montos?|totales?|total|subtotal|amount|saldos?|deudas?|pagos?|valor)\b/i, S.IMPORTE],
+  [/\b(cantidad(es)?|unidades|uds|stock|existencias|qty|quantity|n[uú]mero de|recuento|piezas)\b/i, S.CANTIDAD],
+  [/\b(porcentajes?|pct|ratios?|tasas?|%)\b/i, S.PORCENTAJE],
+  [/\b(duraci[oó]n|horas|minutos|tiempo)\b/i, S.DURACION],
+  [/\b(fechas?|date|d[ií]as?|alta|baja|vencimientos?|caducidad|inicio|fin|periodo|mes(es)?|a[nñ]os?)\b/i, S.FECHA],
+  [/\b(emails?|correos?|e-mail|mail)\b/i, S.EMAIL],
+  [/\b(tel[ée]fonos?|m[oó]viles?|m[oó]vil|phone|tlf|contacto telef)\b/i, S.TELEFONO],
+  [/\b(urls?|web|enlaces?|links?|sitio)\b/i, S.URL],
+  [/\b(estados?|situaci[oó]n|status|fases?|etapas?)\b/i, S.ESTADO],
+  [/\b(ciudad(es)?|provincias?|pa[ií]s(es)?|localidad(es)?|municipios?|regi[oó]n|zonas?|direcci[oó]n|c\.?p\.?|c[oó]digo postal|comunidad)\b/i, S.UBICACION],
+  [/\b(clientes?|vendedor(es|a|as)?|comerciales?|comercial|emplead[oa]s?|responsables?|personas?|contactos?|usuarios?|pacientes?|alumn[oa]s?|propietari[oa]s?|agentes?)\b/i, S.PERSONA],
+  [/\b(empresas?|proveedor(es|a|as)?|compa[nñ][ií]as?|organizaci[oó]n|entidad(es)?|raz[oó]n social)\b/i, S.ORGANIZACION],
+  [/\b(productos?|art[ií]culos?|materiales?|material|servicios?|items?)\b/i, S.PRODUCTO],
+  [/\b(proyectos?|obras?|expedientes?|campa[nñ]as?|casos?)\b/i, S.PROYECTO],
+  [/\b(categor[ií]as?|tipos?|tipo|familias?|segmentos?|grupos?|clases?|canal(es)?|origen)\b/i, S.CATEGORIA],
   [/(^|[\s_-])(id|c[oó]digo|codigo|ref|referencia|clave|sku|nif|cif|dni)([\s_-]|$)/i, S.IDENTIFICADOR],
 ]
 
@@ -316,6 +323,28 @@ function decidirUnidad(semantica, perfil) {
     return null
   }
   if (semantica === S.CANTIDAD) return 'uds'
+  return null
+}
+
+/*
+  Clasifica el VALOR de una columna de estado en una familia manejable.
+  Permite construir cifras como "pendiente de cobro" sin saber de antemano el
+  vocabulario exacto de cada negocio. Devuelve null si no se reconoce, y en
+  ese caso el estado se trata como una categoría más.
+*/
+const FAMILIAS_ESTADO = [
+  ['pendiente', ['pendiente', 'impagado', 'impago', 'vencido', 'vencida', 'moroso', 'por cobrar', 'no', 'ko', 'borrador', 'bloqueado', 'bloqueada', 'parado', 'parada']],
+  ['completado', ['cobrado', 'cobrada', 'pagado', 'pagada', 'completado', 'completada', 'finalizado', 'finalizada', 'terminado', 'terminada', 'entregado', 'entregada', 'cerrado', 'cerrada', 'vendido', 'vendida', 'si', 'sí', 'ok', 'aprobado', 'aprobada', 'confirmado', 'confirmada']],
+  ['cancelado', ['cancelado', 'cancelada', 'anulado', 'anulada', 'rechazado', 'rechazada', 'baja', 'inactivo', 'inactiva']],
+  ['activo', ['activo', 'activa', 'en curso', 'en proceso', 'en progreso', 'abierto', 'abierta', 'nuevo', 'nueva', 'planificado', 'planificada', 'alta', 'disponible', 'reservado', 'enviado', 'enviada']],
+]
+
+export function clasificarEstado(valor) {
+  const v = claveNormalizada(valor)
+  if (!v) return null
+  for (const [familia, palabras] of FAMILIAS_ESTADO) {
+    if (palabras.includes(v)) return familia
+  }
   return null
 }
 
