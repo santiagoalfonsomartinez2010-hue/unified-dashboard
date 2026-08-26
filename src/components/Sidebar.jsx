@@ -12,6 +12,7 @@ import {
   IconoUsuario,
 } from './Iconos'
 import { infoCategoria } from '../lib/categorias'
+import { etiquetaVersion, detalleVersion } from '../lib/version'
 import './Sidebar.css'
 
 /*
@@ -198,6 +199,12 @@ export default function Sidebar({
           </button>
         </div>
       )}
+
+      {/* Qué build se está sirviendo: tras un redeploy este sello tiene que
+          cambiar. Si no cambia, lo que se ve es la versión anterior. */}
+      <p className="sidebar-version" title={detalleVersion()}>
+        {etiquetaVersion()}
+      </p>
     </aside>
   )
 }

@@ -353,3 +353,20 @@
   font-size: 11.5px;
   color: var(--color-amarillo);
 }
+
+/* Sello de compilación: discreto, monoespaciado, para verificar de un vistazo
+   qué commit está desplegado tras un redeploy. */
+.sidebar-version {
+  margin-top: 10px;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--color-texto-tenue);
+  opacity: 0.6;
+  cursor: default;
+  user-select: text;
+}
+
+.sidebar-version:hover {
+  opacity: 1;
+}
