@@ -47,6 +47,12 @@ export async function iniciarSesion(email, password) {
   return data
 }
 
+// Por si el primer correo de confirmación se pierde (spam, límite de envíos…)
+export async function reenviarConfirmacion(email) {
+  const { error } = await supabase.auth.resend({ type: 'signup', email })
+  if (error) throw new Error(traducirErrorAuth(error.message))
+}
+
 export async function cerrarSesion() {
   await supabase.auth.signOut()
 }
@@ -76,7 +82,8 @@ function traducirErrorAuth(mensaje) {
   if (m.includes('valid email')) return 'Escribe un email válido.'
   if (m.includes('email not confirmed'))
     return 'Confirma tu email desde el enlace que te hemos enviado y vuelve a intentarlo.'
-  if (m.includes('rate limit')) return 'Demasiados intentos. Espera un momento y vuelve a probar.'
+  if (m.includes('rate limit'))
+    return 'Demasiados correos seguidos. Supabase limita los envíos de prueba: espera unos minutos antes de reenviar.'
   return mensaje || 'Error de autenticación.'
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { registrarse, iniciarSesion, supabaseDisponible } from '../lib/supabase'
+import { registrarse, iniciarSesion, reenviarConfirmacion, supabaseDisponible } from '../lib/supabase'
 import { IconoChispa } from './Iconos'
 import './PantallaAcceso.css'
 
@@ -19,6 +19,21 @@ export default function PantallaAcceso({ onModoLocal, onVolver, modoInicial = 'e
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [avisoRegistro, setAvisoRegistro] = useState(false)
+  const [reenviando, setReenviando] = useState(false)
+  const [reenviado, setReenviado] = useState(false)
+
+  async function reenviar() {
+    setError(null)
+    setReenviando(true)
+    try {
+      await reenviarConfirmacion(email.trim())
+      setReenviado(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setReenviando(false)
+    }
+  }
 
   async function enviar(e) {
     e.preventDefault()
@@ -76,6 +91,23 @@ export default function PantallaAcceso({ onModoLocal, onVolver, modoInicial = 'e
               Te hemos enviado un enlace a <strong>{email}</strong> para confirmar tu cuenta.
               Ábrelo y después inicia sesión aquí.
             </p>
+            <p className="acceso-texto acceso-texto-tenue">
+              Si no te llega, mira en spam/promociones — o pide que se envíe otra vez.
+            </p>
+
+            {error && <p className="acceso-error">{error}</p>}
+            {reenviado && !error && (
+              <p className="acceso-aviso">Correo reenviado. Puede tardar unos minutos.</p>
+            )}
+
+            <button
+              className="boton-secundario acceso-boton"
+              type="button"
+              onClick={reenviar}
+              disabled={reenviando}
+            >
+              {reenviando ? 'Enviando…' : 'Reenviar correo de confirmación'}
+            </button>
             <button
               className="boton-secundario acceso-boton"
               type="button"
