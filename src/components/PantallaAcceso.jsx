@@ -118,6 +118,19 @@ export default function PantallaAcceso({ onModoLocal, onVolver, modoInicial = 'e
             >
               Volver a iniciar sesión
             </button>
+
+            {onModoLocal && (
+              <>
+                <p className="acceso-separador">o, si el correo no llega</p>
+                <button className="acceso-enlace" type="button" onClick={onModoLocal}>
+                  <IconoChispa tam={14} /> Probar ahora sin cuenta (modo local)
+                </button>
+                <p className="acceso-texto acceso-texto-tenue">
+                  Se queda solo en este navegador — puedes crear la cuenta más adelante y no se
+                  pierde de tu lado, pero no se guarda en la nube.
+                </p>
+              </>
+            )}
           </>
         ) : (
           <>

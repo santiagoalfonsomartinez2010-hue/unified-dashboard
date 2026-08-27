@@ -171,6 +171,44 @@
   border: 1px solid rgba(74, 222, 128, 0.25);
 }
 
+.acceso-separador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 10px;
+  font-size: 11.5px;
+  color: var(--color-texto-tenue);
+  text-align: center;
+}
+
+.acceso-separador::before,
+.acceso-separador::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-borde);
+}
+
+.acceso-enlace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px;
+  border: none;
+  background: transparent;
+  color: var(--color-violeta);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: var(--radio-sm);
+}
+
+.acceso-enlace:hover {
+  background: var(--violeta-tinte);
+}
+
 .acceso-boton {
   display: flex;
   align-items: center;
